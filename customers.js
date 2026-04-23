@@ -843,7 +843,7 @@ const clientDB = {
     "W4092": { name: "Mistia Luna(深)", sales: "F", list: ["C47C", "D80C", "C29C", "C29", "M006B", "E02", "D41C", "D76B", "C24A", "C14G", "C19B", "D82"], box_items: ["C24A", "C14G", "C19B", "D82"] }, // 👈👈👈 就是這裡！大括號後面一定要加逗號！
     
     // 昌少客戶
-    "W4146A": { name: "一緒一番酒場 (中環)", sales: "G", list: list: ["D09C", "D79AC", "D68", "C57", "C14E", "D69", "C24F", "D84", "C912SC", "D82", "C18C", "D10JA", "C61A", "D57D"] },
+    "W4146A": { name: "一緒一番酒場 (中環)", sales: "G", list: ["D09C", "D79AC", "D68", "C57", "C14E", "D69", "C24F", "D84", "C912SC", "D82", "C18C", "D10JA", "C61A", "D57D"] },
     "W4146B": { name: "Anytime (天后)", sales: "G", list: ["D10JA", "D10", "C31B", "D60F"] },
     "W4146C": { name: "CENSU (中環)", sales: "G", list: ["A03"] }
 };
