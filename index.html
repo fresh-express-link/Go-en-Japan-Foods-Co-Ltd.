@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
     <meta property="og:title" content="自助電子落單表">
-    <meta property="og:description" content="香港宏達有限公司提供">
-    <title>宏達客戶通</title>
-    <meta name="apple-mobile-web-app-title" content="宏達客戶通">
+    <meta property="og:description" content="五円日本食品有限公司提供">
+    <title>五円客戶通</title>
+    <meta name="apple-mobile-web-app-title" content="五円客戶通">
 
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon.png">
@@ -322,7 +322,7 @@
         </div>
 
         <div style="text-align: right; font-size: 0.8rem; color: #ccc;">
-            <span id="displaySalesName" onclick="handlePriceToggle()" style="cursor: pointer; user-select: none;">宏達批發</span><br>Tel: <span id="displayPhone"></span>
+            <span id="displaySalesName" onclick="handlePriceToggle()" style="cursor: pointer; user-select: none;">五円</span><br>Tel: <span id="displayPhone"></span>
         </div>
     </div>
     <ul class="nav nav-tabs">
@@ -568,14 +568,11 @@ const weightedUnitMap = {
     };
     
     
-        // 🔥 新增：自動全線漲價大腦設定 (毛利計算法：除以設定值)
+    // 🔥 五円專屬：自動全線漲價大腦設定 (加價 15% = 除以 0.85)
     const clientMarkupRules = {
-        exact: {
-            "W4146": 0.85,  // 岸居 (柴灣) W4146 加價 15% (除以 0.85)
-            "W4097": 0.95   // Vin & Grilled (紅磡) W4097 加價 5% (除以 0.95)
-        },
+        exact: {},
         prefix: {
-            "A23489": 0.95 // 芝加哥哈哈/龍亭系列 (A2348開頭) 加價 5% (除以 0.95)
+            "W4146": 0.85 // 只要是 W4146 開頭的客戶，全線產品除以 0.85 並向上取整
         }
     };
     
