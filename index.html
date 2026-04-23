@@ -1,0 +1,3376 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <meta property="og:title" content="自助電子落單表">
+    <meta property="og:description" content="香港宏達有限公司提供">
+    <title>宏達客戶通</title>
+    <meta name="apple-mobile-web-app-title" content="宏達客戶通">
+
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon.png">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#212529">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        /* 🔥 關鍵修復 3：防止 CSS 鎖死選字功能，導致鍵盤不彈出 */
+        body { 
+            font-family: "Microsoft JhengHei", sans-serif; 
+            background-color: #f8f9fa; 
+            padding-bottom: 160px;
+            padding-bottom: calc(160px + env(safe-area-inset-bottom));
+            -webkit-user-select: auto; /* 確保允許輸入 */
+            user-select: auto;
+        }
+        
+        /* 只有按鈕禁止選字，輸入框必須允許 */
+        .qty-btn, .btn { -webkit-user-select: none; user-select: none; }
+        input { -webkit-user-select: text !important; user-select: text !important; }
+
+        .sticky-header-container { 
+            position: sticky; 
+            top: 0; 
+            z-index: 1020; 
+            background-color: #212529; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2); 
+            padding-top: env(safe-area-inset-top);
+        }
+        .top-info { padding: 12px 15px 5px 15px; color: white; display: flex; justify-content: space-between; align-items: center; }
+        .client-info-wrapper { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+        .client-name-row { display: flex; align-items: center; gap: 10px; }
+        .client-name { font-size: 1.3rem; font-weight: 800; color: #ffc107; cursor: pointer; line-height: 1.2; }
+        .dept-badge { 
+            font-size: 1.3rem; 
+            color: #ffc107; 
+            background-color: transparent; 
+            border: 2px solid #ffc107; 
+            padding: 5px 15px; 
+            border-radius: 50px; 
+            font-weight: 800; 
+            cursor: pointer; 
+            display: none; 
+            margin-left: 10px;
+            vertical-align: middle;
+            white-space: nowrap; /* 🔥 新增：強制文字絕對不換行 */
+            flex-shrink: 0;      /* 🔥 新增：即使空間不夠，按鈕也絕對不准縮小變形 */
+        }
+        .dept-badge:active {
+            background-color: #ffc107; /* 點擊時變實心黃 */
+            color: #000;
+        }
+        
+        .nav-tabs { border-bottom: none; padding: 0 10px; }
+        .nav-link { color: #aaa; font-weight: bold; border: none; border-radius: 10px 10px 0 0; padding: 10px 15px; font-size: 1rem; background: transparent; }
+        .nav-link.active { background-color: #f8f9fa; color: #000; border-bottom: 4px solid #ffc107; }
+        
+        /* 🔥 修改：讓搜尋欄永遠顯示 (display: block) */
+        .search-section { background-color: #f8f9fa; padding: 10px 15px; border-bottom: 1px solid #ddd; display: block; }
+        
+        .search-wrapper { position: relative; }
+        .search-input { border-radius: 20px; border: 1px solid #ccc; padding: 8px 35px 8px 15px; width: 100%; font-size: 16px; /* 防止 iOS 自動縮放 */ }
+        .btn-clear-search { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #adb5bd; cursor: pointer; font-size: 1.1rem; display: none; z-index: 10; }
+        .cat-header { background-color: #ffc107; color: #000; font-weight: 800; padding: 8px 15px; margin-top: 0; font-size: 1.1rem; border-bottom: 1px solid #e0a800; }
+        .product-row { background: white; border-bottom: 1px solid #eee; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; }
+        .product-row.oos { background-color: #f8f9fa; opacity: 0.8; }
+        .p-info { flex: 1; padding-right: 10px; overflow: hidden; }
+        .p-name { font-size: 1.1rem; font-weight: 700; color: #000; line-height: 1.3; margin-bottom: 2px; }
+        .p-code { font-size: 0.85rem; color: #888; font-weight: normal; font-family: Arial, sans-serif; }
+
+        /* 🔥 修復購物車彈窗：終極鎖定版，強制攔截 Bootstrap 預設滾動 */
+        #cartModal {
+            z-index: 99999 !important;
+            overflow: hidden !important; /* 🔥 關鍵 1：禁止整個黑屏背景跟著滾動，死死鎖定在螢幕上 */
+        }
+        
+        #cartModal .modal-dialog {
+            margin: 0 auto !important; 
+            /* 🔥 關鍵 2：用 padding 撐出安全距離，取代 margin，避免高度計算溢出 */
+            padding-top: max(40px, calc(env(safe-area-inset-top) + 10px)) !important;
+            padding-bottom: max(25px, env(safe-area-inset-bottom)) !important;
+            height: 100dvh !important; /* 🔥 關鍵 3：鎖死總高度為 100% 手機螢幕動態高度 */
+            display: flex !important;
+            flex-direction: column !important;
+            /* 🔥 關鍵一步：把 flex-start 改成 center，讓它在東西少的時候完美置中！ */
+            justify-content: center !important; 
+        }
+
+        #cartModal .modal-content {
+            display: flex !important;
+            flex-direction: column !important;
+            max-height: 100% !important; /* 內容最多只能長到扣除安全距離後的高度 */
+            overflow: hidden !important; 
+            width: 96% !important; /* 左右稍微留點邊距，保持精緻的懸浮感 */
+            margin: 0 auto !important;
+        }
+
+        #cartModal .modal-header {
+            padding: 12px 15px !important; 
+            flex-shrink: 0 !important; /* 標題列絕對不變形 */
+        }
+
+        #cartModal .modal-body {
+            overflow-y: auto !important; /* 🔥 關鍵 4：嚴格規定只有這塊白色區域可以上下滑動 */
+            -webkit-overflow-scrolling: touch !important; /* 讓 iPhone 滑動手感更加絲滑 */
+        }
+
+        #cartModal .modal-content > div:last-child {
+            flex-shrink: 0 !important; /* 底部按鈕列絕對不變形、不被擠走 */
+        }
+        
+        
+       /* 🔥 底部價格免責聲明專屬樣式 */
+        .price-disclaimer {
+            /* 👉 1. 調大小在這裡：數字越大，字就越大 (目前幫您設為 14px) */
+            font-size: 14px !important; 
+            
+            /* 👉 2. 調顏色在這裡：目前幫您換成了更深的灰色 #666666 */
+            color: #555555 !important; 
+            
+            flex-grow: 1 !important; 
+            text-align: center !important; 
+            white-space: nowrap !important; 
+            margin: 0 5px; 
+        }
+        
+                /* 🔥 修復底部「共 X 款」換行問題 */
+        .total-box {
+            white-space: nowrap !important; /* 魔法 1：文字絕對不准換行 */
+            flex-shrink: 0 !important;      /* 魔法 2：骨氣硬起來，絕對不被中間文字擠壓 */
+            min-width: max-content;         /* 魔法 3：依據文字內容自動撐開安全寬度 */
+        }
+
+        /* 🔥 日本鮮貨專屬提示語樣式 (深紅醒目版) */
+        .fresh-notice {
+            color: #cc0000 !important; /* 🔥 換成極度醒目的深紅色 */
+            font-weight: bold !important; /* 讓字體變粗，增加份量感 */
+            margin-left: 10px; /* 稍微拉開一點距離，避免擠在一起 */
+            letter-spacing: 0.5px;
+            /* 💡 這裡我把 font-size 刪掉了！這樣它就會自動變得跟前面的「日本鮮貨」一模一樣大！ */
+        }
+        
+        /* 🔥 修復：走馬燈小貼士 (文案精簡後，放大字體填滿空間) */
+        .tip-banner {
+            background-color: #e2eefd;
+            color: #004085;
+            font-size: 1.05rem; 
+            font-weight: 900; 
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 10px 75px 10px 15px; 
+            border-bottom: 1px solid #b8daff;
+            position: relative; 
+            line-height: 1.4; 
+        }
+
+        .tip-lightbulb {
+            font-size: 1.35rem; 
+            margin-right: 4px;
+            vertical-align: middle;
+        }
+        
+        /* 🔥 升級：用強制放大魔法 (scale) 解決 Emoji 鎖死問題 */
+        .pointing-arrow {
+            position: absolute;
+            right: 65px; /* 精準對齊下方的 0 */
+            top: 50%;
+            /* 🔥 調整：從 -20px 改為 -17px。負數越小(越接近0)，手指越往下移。 */
+            margin-top: -15px; 
+            animation: bounceDown 0.8s infinite; 
+            user-select: none; 
+        }
+        
+        /* 🔥 結合「強制放大 (稍微縮小版)」與「上下跳動」 */
+        @keyframes bounceDown {
+            /* 從 2.2 縮小到 1.9，您可以手動微調這個數字 (例如 1.8 或 2.0) */
+            0%, 100% { transform: scale(1.9) translateY(-3px); }
+            50% { transform: scale(1.9) translateY(3px); }
+        }
+
+        /* 視覺閃光回饋 */
+        @keyframes flashSuccess {
+            0% { background-color: #fff; }
+            30% { background-color: #ffda6a; } 
+            100% { background-color: #fff9db; }
+        }
+        
+        .flash-success {
+            animation: flashSuccess 1s ease-out;
+        }
+        
+        /* 🔥 新增：價格標籤樣式 */
+        .price-tag {
+            font-size: 1rem;
+            font-weight: 900;
+            color: #d32f2f; /* 醒目的紅色 */
+            margin-right: 12px;
+            flex-shrink: 0; /* 絕對不准被擠壓變形 */
+            text-align: right;
+            line-height: 1.2;
+        }
+
+        /* 🔥 更新：讓超長名字自動換行，不會把價格擠出去 */
+        .p-info { flex: 1; padding-right: 10px; overflow: hidden; min-width: 0; }
+        .p-name { word-wrap: break-word; }
+        /* 🔥 修復：缺貨標籤絕對不拆行 */
+        .oos-badge { font-size: 0.8rem; background-color: #dc3545; color: white; padding: 2px 6px; border-radius: 4px; margin-left: 5px; vertical-align: middle; white-space: nowrap; display: inline-block; margin-top: 2px; }
+        .qty-control { display: flex; align-items: center; background: #fff; border: 1px solid #ced4da; border-radius: 8px; width: 120px; justify-content: space-between; height: 38px; flex-shrink: 0; overflow: hidden; }
+        .qty-control.disabled { background: #e9ecef; border-color: #dee2e6; }
+        .qty-btn { width: 35px; height: 100%; border-radius: 0; background: #f8f9fa; color: #212529; display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: bold; font-size: 1.2rem; user-select: none; border: none; }
+        .qty-btn:active { background: #ffc107; }
+        .qty-btn.disabled { color: #adb5bd; cursor: not-allowed; background: #e9ecef; }
+        .qty-input { width: 50px; text-align: center; border: none; font-weight: bold; font-size: 1.1rem; color: #333; background: transparent; padding: 0; }
+        .qty-input.unit-kg { color: #d63384; font-size: 1rem; }
+        .qty-input.unit-box { color: #d35400; font-size: 1rem; }
+        .qty-input.unit-piece { color: #198754; font-size: 1rem; }
+        .product-row.selected { background-color: #fff9db; border-left: 5px solid #ffc107; }
+        .bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: white; box-shadow: 0 -4px 15px rgba(0,0,0,0.15); padding: 10px 15px; z-index: 1030; display: flex; flex-direction: column; gap: 8px; padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+        .bottom-info-row { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 2px; }
+        .bottom-btn-row { display: flex; gap: 8px; width: 100%; }
+        .total-box { font-size: 1.1rem; font-weight: bold; color: #333; }
+        .total-num { color: #d32f2f; font-size: 1.4rem; padding: 0 3px; }
+        .btn-view-cart { background-color: #6c757d; color: white; border: none; padding: 6px 15px; border-radius: 50px; font-weight: bold; font-size: 0.9rem; transition: all 0.3s ease; }
+        .btn-view-cart.active { background: linear-gradient(45deg, #ff9800, #ff5722); box-shadow: 0 2px 8px rgba(255, 87, 34, 0.4); }
+        .btn-send { border: none; padding: 12px 5px; border-radius: 10px; font-weight: bold; font-size: 1rem; flex: 1; display: flex; align-items: center; justify-content: center; gap: 5px; color: white; transition: transform 0.1s; }
+        .btn-send:active { transform: scale(0.98); }
+        .btn-sales { background-color: #25D366; box-shadow: 0 4px 10px rgba(37, 211, 102, 0.3); } 
+        .btn-group { background-color: #0d6efd; box-shadow: 0 4px 10px rgba(13, 110, 253, 0.3); }
+        .modal-footer { display: flex; gap: 8px; padding: 15px; justify-content: space-between; flex-wrap: wrap; }
+        .modal-footer .btn { flex: 1; min-width: 100px; }
+        .modal-footer .btn-outline-danger { flex: 0 0 auto; min-width: auto; border-radius: 50px; padding: 8px 15px; } 
+        .modal-footer .btn-secondary { display: none; }
+        .tab-content { display: none; padding-top: 10px; }
+        .tab-content.active { display: block; }
+        .modal-header { background-color: #212529; color: white; }
+        .modal-title { font-weight: bold; color: #ffc107; }
+        .unit-btn-group { display: flex; gap: 15px; justify-content: center; padding: 20px; }
+        .btn-unit-select { flex: 1; padding: 15px; border: 2px solid #ddd; border-radius: 10px; background: white; font-weight: bold; font-size: 1.1rem; text-align: center; cursor: pointer; transition: all 0.2s; }
+        .btn-unit-select:hover { background-color: #f8f9fa; }
+        .btn-unit-select.piece { border-color: #212529; color: #212529; }
+        .btn-unit-select.kg { border-color: #d63384; color: #d63384; }
+        .freq-divider { text-align: center; margin: 20px 0; font-size: 0.85rem; color: #aaa; position: relative; }
+        .freq-divider:before { content: ""; position: absolute; top: 50%; left: 15%; width: 25%; height: 1px; background: #ddd; }
+        .freq-divider:after { content: ""; position: absolute; top: 50%; right: 15%; width: 25%; height: 1px; background: #ddd; }
+        
+        .setup-input-group { margin-bottom: 15px; text-align: left; }
+        .setup-label { font-weight: bold; margin-bottom: 5px; display: block; color: #333; }
+        .setup-input { width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem; }
+        .setup-input:focus { border-color: #ffc107; outline: none; }
+        .btn-setup-save { width: 100%; background-color: #ffc107; color: black; font-weight: bold; padding: 12px; border: none; border-radius: 8px; font-size: 1.1rem; margin-top: 10px; }
+        
+        .admin-controls { text-align: center; margin: 40px 0 20px 0; padding-top: 20px; border-top: 1px dashed #ddd; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+        .btn-reset { padding: 8px 20px; border-radius: 50px; font-size: 0.9rem; transition: all 0.2s; cursor: pointer; border: 1px solid; background: white; width: fit-content; }
+        .btn-reset-freq { color: #6c757d; border-color: #ced4da; }
+        .btn-reset-freq:hover { background: #f8f9fa; color: #495057; border-color: #adb5bd; }
+        .btn-logout { color: #d32f2f; border-color: #f5c6cb; }
+        .btn-logout:hover { background: #fff5f5; color: #a50e0e; border-color: #d32f2f; }
+    </style>
+</head>
+<body>
+
+<script>
+    // 💡 每次發布新功能或修改資料，請修改這個版本號
+    const CURRENT_WEB_VERSION = "20260420.04"; 
+
+    (function() {
+        const savedVer = localStorage.getItem('app_version_tag');
+        if (savedVer !== CURRENT_WEB_VERSION) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const clientID = urlParams.get('id') || "gen_user_A";
+            const storageKey = "client_user_" + clientID;
+            const cartData = localStorage.getItem('orderCart_' + storageKey);
+            
+            let canRefresh = true;
+            try {
+                if (cartData && Object.keys(JSON.parse(cartData)).length > 0) canRefresh = false;
+            } catch(e) {}
+
+            if (canRefresh) {
+                localStorage.setItem('app_version_tag', CURRENT_WEB_VERSION);
+                console.log("偵測到新版本，自動刷新中...");
+                window.location.reload(true); 
+            }
+        }
+    })();
+</script>
+<script src="sales_config.js?v=20260420.04"></script>
+<script src="customers.js?v=20260420.04"></script>
+
+<div class="sticky-header-container">
+    
+    <div class="top-info">
+        <div class="client-info-wrapper">
+            <div class="client-name-row">
+                <div onclick="openSetupModal()" style="cursor: pointer;">
+                    <div class="client-name" id="displayClientName">設定客戶 <i class="bi bi-pencil-square" style="font-size:0.8em"></i></div>
+                </div>
+                <div id="deptBadge" class="dept-badge" onclick="showDeptCheckModal('switch')">🔵 壽司部</div>
+                
+                <div id="switchBranchBtn" class="dept-badge" onclick="branchModal.show()">
+                    <i class="bi bi-arrow-repeat"></i> 切換分店
+                </div>
+            </div>
+            
+            <div class="d-flex align-items-center gap-2">
+                <div style="font-size: 0.8rem; color: #ccc;" id="displayClientCode">點擊此處設定</div>
+            </div>
+        </div>
+
+        <div style="text-align: right; font-size: 0.8rem; color: #ccc;">
+            <span id="displaySalesName" onclick="handlePriceToggle()" style="cursor: pointer; user-select: none;">宏達批發</span><br>Tel: <span id="displayPhone"></span>
+        </div>
+    </div>
+    <ul class="nav nav-tabs">
+        <li class="nav-item" style="flex:1; text-align:center;"><button class="nav-link active" style="width:100%" onclick="switchTab('frequent')">🌟 常用清單</button></li>
+        <li class="nav-item" style="flex:1; text-align:center;"><button class="nav-link" style="width:100%" onclick="switchTab('all')">📋 全部產品</button></li>
+    </ul>
+    <div class="search-section" id="searchBar">
+        <div class="search-wrapper">
+            <input type="text" id="searchInput" class="search-input" placeholder="🔍 搜尋產品 / 編號..." oninput="filterAllProducts()" onpaste="handleSearchPaste(event)">
+            <i class="bi bi-x-circle-fill btn-clear-search" id="clearSearchBtn" onclick="clearSearch()"></i>
+        </div>
+    </div>
+
+    <div class="tip-banner">
+        <div><span class="tip-lightbulb">💡</span>長按「0」，可切換以「箱取」下單</div>
+        <span class="pointing-arrow">👇</span>
+    </div>
+</div>
+<div id="tab-frequent" class="tab-content active">
+    <div class="text-center p-5 text-muted" id="emptyFrequentMsg">
+        <i class="bi bi-basket3" style="font-size: 2rem;"></i><br><br>
+        您的常用清單目前是空的。<br>
+        請到「全部產品」頁面選購，<br>系統會自動記憶您的選擇！
+    </div>
+    <div id="frequentListContent"></div>
+    <div class="admin-controls" id="adminControls">
+        <button class="btn-reset btn-reset-freq" onclick="resetFrequentList()" id="btnResetFreq" style="display:none;">
+            <i class="bi bi-arrow-counterclockwise"></i> 重置常用清單
+        </button>
+        <button class="btn-reset btn-logout" onclick="logoutUser()">
+            <i class="bi bi-box-arrow-right"></i> 登出 / 重置身份
+        </button>
+    </div>
+</div>
+<div id="tab-all" class="tab-content"></div>
+
+<div class="bottom-bar">
+    <div class="bottom-info-row">
+        <div class="total-box">共 <span id="totalQty" class="total-num">0</span> 款</div>
+        
+        <div class="price-disclaimer">價格僅供參考，以最新報價為準</div>
+        
+        <button id="viewCartBtn" class="btn-view-cart" onclick="openCartModal()" disabled><i class="bi bi-cart3"></i> 查看已選</button>
+    </div>
+    <div class="bottom-btn-row">
+        <button class="btn-send btn-sales" onclick="sendWhatsApp('direct')"><i class="bi bi-whatsapp"></i> 發送給業務員</button>
+        <button class="btn-send btn-group" onclick="sendWhatsApp('group')"><i class="bi bi-people-fill"></i> 發送到群組</button>
+    </div>
+</div>
+
+<div class="modal fade" id="branchModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title text-dark fw-bold"><i class="bi bi-shop"></i> 請選擇下單分店</h5>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-3" style="font-size: 1.1rem; font-weight: bold; color: #333;">您好！請選擇本次要落單的門店：</p>
+                <div id="branchList" class="d-grid gap-2">
+                    </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="noteModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="noteModalTitle">⚠️ 附加服務詢問</h5>
+            </div>
+            <div class="modal-body text-center">
+                <p class="mb-4" style="font-size: 1.2rem; font-weight: bold;" id="noteModalQuestion">請問需要 Call 車嗎？</p>
+                <div class="d-grid gap-3">
+                    <button class="btn btn-lg btn-success" onclick="confirmNote(true)"><i class="bi bi-check-circle"></i> 是，請幫我備註</button>
+                    <button class="btn btn-lg btn-secondary" onclick="confirmNote(false)"><i class="bi bi-x-circle"></i> 否，不需要</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="setupModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">⚙️ 客戶資料設定</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" id="setupCloseBtn" style="display:none;"></button>
+            </div>
+            <div class="modal-body">
+                <div class="setup-input-group">
+                    <label class="setup-label">客戶名稱 / 店鋪名</label>
+                    <input type="text" id="inputClientName" class="setup-input" placeholder="例如：我的餐廳">
+                </div>
+                <div class="setup-input-group">
+                    <label class="setup-label">客戶編號 (或填寫 新客戶)</label>
+                    <input type="text" id="inputClientCode" class="setup-input" placeholder="例如：A1234">
+                </div>
+                <button class="btn-setup-save" onclick="saveClientDetails()">💾 儲存設定</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="unitSelectionModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">請選擇計價單位</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body">
+                <p class="text-center mb-3">此產品支持稱重計價，請確認單位：</p>
+                <div class="unit-btn-group">
+                    <button id="btn-unit-left" class="btn-unit-select"><i class="bi bi-box-seam"></i> 左按鈕</button>
+                    <button id="btn-unit-right" class="btn-unit-select"><i class="bi bi-speedometer2"></i> 右按鈕</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="cartModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">已選產品清單</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button></div>
+            <div class="modal-body" id="cartModalBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-danger" onclick="clearCart()"><i class="bi bi-trash"></i> 清空</button>
+                <button type="button" class="btn btn-send btn-sales" onclick="sendWhatsApp('direct')">發給業務員</button>
+                <button type="button" class="btn btn-send btn-group" onclick="sendWhatsApp('group')">發到群組</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="adminShareModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title fw-bold"><i class="bi bi-magic"></i> 業務員快速更新</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-4">
+                <p class="mb-3 text-muted">將為客戶添加以下產品：</p>
+                <div id="adminShareList" class="alert alert-secondary text-start mb-4 fw-bold" style="font-size:1.1rem; line-height:1.6;">
+                </div>
+                <div class="d-grid">
+                    <button class="btn btn-success btn-lg fw-bold py-3" onclick="sendAdminWhatsApp()">
+                        <i class="bi bi-whatsapp"></i> 發送到 WhatsApp
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deptCheckModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title fw-bold"><i class="bi bi-diagram-3"></i> 切換部門下單</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-4">
+                <p class="mb-3 fw-bold" style="font-size: 1.3rem;">您已完成 <span id="currentDeptName" class="text-warning bg-dark px-2 rounded"></span> 的選擇。</p>
+                <p class="mb-4 text-muted" style="font-size: 1.1rem;">是否切換到其他部門繼續下單？<br>(訂單將會合併發送)</p>
+                
+                <div id="deptButtonsContainer" class="d-grid gap-3 mb-4">
+                    </div>
+                
+                <hr>
+                <div class="d-grid">
+                    <button class="btn btn-success btn-lg fw-bold fs-5 py-3" onclick="executeSendWhatsApp(pendingSendMode)">
+                        <i class="bi bi-whatsapp"></i> 不用，直接發送所有訂單
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="limitModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-white border-warning">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title text-warning fw-bold"><i class="bi bi-exclamation-triangle-fill"></i> 限購提示</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-4">
+                <p id="limitModalMsg" class="fs-5 fw-bold mb-0"></p>
+            </div>
+            <div class="modal-footer border-secondary justify-content-center">
+                <button type="button" class="btn btn-warning text-dark fw-bold px-5" data-bs-dismiss="modal">我知道了</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+   
+    // ==========================================
+// ⚖️ 稱重產品專屬單位對照表
+// ==========================================
+const weightedUnitMap = {
+    "B02E": "隻", "B04": "條", "B09": "隻", "B14": "條", "B20E": "條",
+    "B20G": "條", "B50": "條", "B50C": "邊", "B55": "條", "B55A": "條",
+    "B55D": "條", "B55E": "條", "B67A": "set", "B67AA": "set", "B67B": "set",
+    "B67C": "set", "B73": "條", "B74C": "條", "B74F": "條", "B74G": "條",
+    "C05": "隻", "C05A": "隻", "D01": "袋", "D05": "隻", "D05C": "隻",
+    "D17C": "塊", "D17D": "塊", "D17DD": "塊", "D17DE": "塊", "D17E": "塊",
+    "D17G": "塊", "D18": "條", "D18A": "條", "D26": "條", "D26D": "條",
+    "D30": "隻", "D30A": "隻", "D30B": "隻", "D61B": "包", "D61C": "包",
+    "D69": "邊", "D69B": "包", "D69E": "包", "D70": "隻", "D71": "條",
+    "D76A": "包", "E06": "塊", "M003LAA": "條", "M003LBA": "條", "M006B": "包",
+    "M007": "條", "M010": "條"
+};
+    
+    
+    // 🔥 全體客戶強制原箱名單 (不用一個個改客戶資料)
+    const globalBoxItems = ["B14C", "B14AA","C36E", "C19C", "C14GA", "D39D", "E04C", "C52E", "G03D", "G04A", "G04B", "G03E", "G04", "G04F", "W017A", "H03B", "G01AA", "G01BA", "G01CA", "G01DA"];
+   // 🔥 全局限購設定 (預設所有人的限購數量)
+    // 🔥 客戶專屬特殊定價表 (獨立於常規價格，不受日常改價影響)
+    const specialPricing = {
+        // 1. 精準指定客戶 (單一門店)
+        exact: {
+            "W3708": { "D69": "$188" }, // 汕崎(荔) 急凍油甘魚柳（半邊）
+            "W3112#A": { "D10JA": "$163", "D30B": "$215" } // 🔥 黑木亭的兩個特價產品合併在這裡！
+        },
+        // 2. 指定客戶編號開頭 (集團 / 系列門店)
+        prefix: {
+            "A1075": { "D10JA": "$172" },// 御品全線: 阿根廷赤蝦L1
+            "A1075": { "A07C": "$85" },// 御品全線: 紫膽
+            "A1565": { "A07C": "$88" },// 寶達全線: 紫膽
+            "W3824": { "C24F": "$54" }// 呂錦記全線: 丘比芝麻箱取價$324/箱
+        }
+    };
+    const purchaseLimits = { 
+        "": 5   // 加拿大海膽 (A03) 預設所有人限購 5 盒
+    };
+
+    // 🔥 VIP 客戶專屬限購設定 (支援「開頭字元」智慧匹配)
+    const vipPurchaseLimits = {
+        // 💡 提醒：加拿大海膽 (A03) 已全面缺貨，因此移除了 661 客戶的特權。
+        // 這裡暫時留空，未來若有新產品需要設定 VIP 特權，再按照格式加回來即可！
+    };
+    
+    
+        // 🔥 新增：自動全線漲價大腦設定 (毛利計算法：除以設定值)
+    const clientMarkupRules = {
+        exact: {
+            "W4146": 0.85,  // 岸居 (柴灣) W4146 加價 15% (除以 0.85)
+            "W4097": 0.95   // Vin & Grilled (紅磡) W4097 加價 5% (除以 0.95)
+        },
+        prefix: {
+            "A23489": 0.95 // 芝加哥哈哈/龍亭系列 (A2348開頭) 加價 5% (除以 0.95)
+        }
+    };
+    
+    // 🔥 獨立產品資料庫 (價格與箱規，以後每個月只改這裡)
+    // 🔥 獨立產品資料庫 (價格與箱規) - 2026/04 更新
+    // 💡 預設價格隱藏，需透過彩蛋解鎖
+    const productInfo = {
+        "A06F": { price: "$98/盒", boxSpec: "" },
+        "A07C": { price: "$98/盒", boxSpec: "" },
+        "A00A": { price: "$30/盒", boxSpec: "" },
+        "A03": { price: "$125/盒", boxSpec: "" },
+        "A12A": { price: "$125/盒", boxSpec: "" },
+        "A08": { price: "$125/盒", boxSpec: "" },
+        "A12B": { price: "", boxSpec: "" },
+        "C59": { price: "$280/袋", boxSpec: "12包 / 箱" },
+        "D01": { price: "$250/kg", boxSpec: "" },
+        "A06E": { price: "$55/盒", boxSpec: "" },
+        "AJ1": { price: "$360/盒", boxSpec: "" },
+        "AJ4": { price: "時價", boxSpec: "" },
+        "AJ3": { price: "時價", boxSpec: "" },
+        "AJ6": { price: "時價", boxSpec: "" },
+        "B01": { price: "$85/kg", boxSpec: "25kg / 箱" },
+        "B50": { price: "$145/kg", boxSpec: "" }, // 價格已更新
+        "B14": { price: "時價/kg", boxSpec: "" },
+        "B14C": { price: "時價/kg", boxSpec: "" },
+        "B14H": { price: "時價/邊", boxSpec: "" },
+        "B14AA": { price: "時價/kg", boxSpec: "" },
+        "B67A": { price: "$618/kg", boxSpec: "" },
+        "B67AA": { price: "$518/kg", boxSpec: "" },
+        "B67B": { price: "$458/kg", boxSpec: "" },
+        "B67C": { price: "$398/kg", boxSpec: "" },
+        "B04": { price: "$270/kg", boxSpec: "" },
+        "B55A": { price: "$288/kg", boxSpec: "" },
+        "B50C": { price: "$292/kg", boxSpec: "" },
+        "B55": { price: "$298/kg", boxSpec: "" },
+        "B74C": { price: "$328/kg", boxSpec: "" },
+        "B20E": { price: "$198/kg", boxSpec: "" },
+        "B20G": { price: "$188/kg", boxSpec: "" },
+        "B55D": { price: "$278/kg", boxSpec: "" },
+        "B74G": { price: "$272/kg", boxSpec: "" },
+        "B09": { price: "$215/kg", boxSpec: "" },
+        "B08SB": { price: "$38/pc", boxSpec: "" }, // 箱規已清空
+        "B13": { price: "$278/盒", boxSpec: "" },
+        "B74A": { price: "$950/箱", boxSpec: "" },
+        "B55E": { price: "$432/kg", boxSpec: "" },
+        "B74F": { price: "$338/kg", boxSpec: "" },
+        "B73": { price: "$268/kg", boxSpec: "" },
+        "B08TA": { price: "$38/盒", boxSpec: "" },
+        "B02E": { price: "$397/kg", boxSpec: "" },
+        "C01": { price: "$22/盒", boxSpec: "" },
+        "C04": { price: "$25/包", boxSpec: "" },
+        "C01FA": { price: "$22/包", boxSpec: "" },
+        "C01FB": { price: "$28/包", boxSpec: "" },
+        "C01F": { price: "$18/包", boxSpec: "" },
+        "C01CA": { price: "$68/盒", boxSpec: "" },
+        "C01CB": { price: "$68/盒", boxSpec: "" },
+        "C01CJ": { price: "$36/盒", boxSpec: "" },
+        "C01CK": { price: "$35/包", boxSpec: "" },
+        "C01CH": { price: "$23/扎", boxSpec: "" },
+        "C01CG": { price: "$75/扎", boxSpec: "" },
+        "C01CO": { price: "$88/盒", boxSpec: "20朵 / 盒" },
+        "C01D": { price: "$28/樽", boxSpec: "" },
+        "C05": { price: "$36/kg", boxSpec: "" },
+        "C05A": { price: "$58/kg", boxSpec: "" },
+        "D03A": { price: "$335/盒", boxSpec: "12盒 / 箱" },
+        "D03B": { price: "$378/盒", boxSpec: "12盒 / 箱" },
+        "D04C": { price: "$378/盒", boxSpec: "12盒 / 箱" },
+        "D04D": { price: "$388/盒", boxSpec: "12盒 / 箱" },
+        "D03": { price: "$358/盒", boxSpec: "12盒 / 箱" },
+        "D03E": { price: "$388/盒", boxSpec: "12盒 / 箱" },
+        "D10JA": { price: "$178/盒", boxSpec: "6盒 / 箱" },
+        "D10JAA": { price: "$180/盒", boxSpec: "6盒 / 箱" },
+        "D03EB": { price: "$898/盒", boxSpec: "6盒 / 箱" },
+        "D03EBA": { price: "$948/盒", boxSpec: "6盒 / 箱" },
+        "D10": { price: "$265/盒", boxSpec: "12盒 / 箱" },
+        "D10A": { price: "$275/盒", boxSpec: "12盒 / 箱" },
+        "D10M": { price: "$248/盒", boxSpec: "10盒 / 箱" },
+        "D10JE": { price: "$40/碟", boxSpec: "20碟 / 箱" },
+        "D10JD": { price: "$48/碟", boxSpec: "20碟 / 箱" },
+        "D10K": { price: "$39/碟", boxSpec: "20碟 / 箱" },
+        "D10KA": { price: "$29/碟", boxSpec: "20碟 / 箱" },
+        "D10KC": { price: "$47/碟", boxSpec: "20碟 / 箱" },
+        "D03DD": { price: "$27/碟", boxSpec: "40包 / 箱" },
+        "D03DC": { price: "$30/碟", boxSpec: "40包 / 箱" },
+        "D10N": { price: "$26/碟", boxSpec: "40碟 / 箱" },
+        "D10NA": { price: "$31/碟", boxSpec: "40包 / 箱" },
+        "D03G": { price: "$47/碟", boxSpec: "40包 / 箱" },
+        "D03CA": { price: "$27/碟", boxSpec: "40包 / 箱" },
+        "D03DA": { price: "$40/碟", boxSpec: "40包 / 箱" },
+        "D03D": { price: "$43/碟", boxSpec: "40包 / 箱" },
+        "D09GA": { price: "$335/盒", boxSpec: "10盒 / 箱" },
+        "D09D": { price: "$360/盒", boxSpec: "10盒 / 箱" },
+        "D09B": { price: "$445/盒", boxSpec: "10盒 / 箱" },
+        "D09F": { price: "$478/盒", boxSpec: "10盒 / 箱" },
+        "D09A": { price: "$528/盒", boxSpec: "10盒 / 箱" },
+        "D09": { price: "$510/盒", boxSpec: "10盒 / 箱" },
+        "D09C": { price: "$575/盒", boxSpec: "10盒 / 箱" },
+        "D09M": { price: "", boxSpec: "10盒 / 箱" },
+        "D09LA": { price: "$25/碟", boxSpec: "50碟 / 箱" },
+        "D47A": { price: "$198/盒", boxSpec: "10盒 / 箱" },
+        "D47": { price: "$192/盒", boxSpec: "10盒 / 箱" },
+        "D47B": { price: "$42/碟", boxSpec: "20碟 / 箱" },
+        "D47C": { price: "$56/碟", boxSpec: "20碟 / 箱" },
+        "D07": { price: "$22/碟", boxSpec: "50包 / 箱" },
+        "D07A": { price: "$45/碟", boxSpec: "50碟 / 箱" },
+        "D48A": { price: "$42/包", boxSpec: "40碟 / 箱" },
+        "D48B": { price: "$42/包", boxSpec: "40碟 / 箱" },
+        "D48E": { price: "$21/碟", boxSpec: "50碟 / 箱" },
+        "D48G": { price: "$28/碟", boxSpec: "50碟 / 箱" },
+        "D07F": { price: "$158/碟", boxSpec: "20碟 / 箱" },
+        "D07BA": { price: "$112/碟", boxSpec: "28碟 / 箱" },
+        "D07B": { price: "$20/碟", boxSpec: "50包 / 箱" },
+        "D44B": { price: "$28/碟", boxSpec: "40包 / 箱" },
+        "D44D": { price: "$15/包", boxSpec: "36碟 / 箱" },
+        "D69": { price: "$198/kg", boxSpec: "" },
+        "D69B": { price: "$138/kg", boxSpec: "" },
+        "D41AB": { price: "$75/盒", boxSpec: "18盒 / 箱" },
+        "D69E": { price: "$30/kg", boxSpec: "" },
+        "D05F": { price: "$28/包", boxSpec: "20包 / 箱" },
+        "D41F": { price: "$98/盒", boxSpec: "10盒 / 箱" },
+        "D05C": { price: "$118/kg", boxSpec: "10kg / 箱" },
+        "D39B": { price: "$112/碟", boxSpec: "10包 / 箱" },
+        "D39BA": { price: "$208/碟", boxSpec: "4包 / 箱" },
+        "D05": { price: "$244/kg", boxSpec: "10kg / 箱" },
+        "D39C": { price: "$75/碟", boxSpec: "20包 / 箱" },
+        "D05B": { price: "$25/碟", boxSpec: "50包 / 箱" },
+        "D39": { price: "$26/碟", boxSpec: "50包 / 箱" },
+        "D05BA": { price: "$30/碟", boxSpec: "50包 / 箱" },
+        "D62": { price: "$78/包", boxSpec: "10包 / 箱" },
+        "D58A": { price: "$458/碟", boxSpec: "6包 / 箱" },
+        "D58C": { price: "$228/碟", boxSpec: "20包 / 箱" },
+        "D58": { price: "$22/碟", boxSpec: "50包 / 箱" },
+        "D58B": { price: "$178/碟", boxSpec: "20包 / 箱" },
+        "D61C": { price: "$108/kg", boxSpec: "10kg / 箱" },
+        "D61B": { price: "$51/kg", boxSpec: "10kg / 箱" },
+        "D42": { price: "$13/包", boxSpec: "25包 / 箱" },
+        "D83": { price: "$85/包", boxSpec: "16包 / 箱" },
+        "D31A": { price: "$45/條", boxSpec: "40條 / 箱" },
+        "D25": { price: "$28/碟", boxSpec: "50包 / 箱" },
+        "D18": { price: "$188/kg", boxSpec: "20kg / 箱" },
+        "D18A": { price: "$108/kg", boxSpec: "20kg / 箱" },
+        "D17D": { price: "$765/kg", boxSpec: "" },
+        "D79": { price: "$105/包", boxSpec: "18包 / 箱" },
+        "D17DD": { price: "$638/kg", boxSpec: "" },
+        "D79A": { price: "$88/盒", boxSpec: "12盒 / 箱" },
+        "D79AC": { price: "$45/包", boxSpec: "30包 / 箱" },
+        "D17G": { price: "$565/kg", boxSpec: "" },
+        "D17C": { price: "$135/kg", boxSpec: "10k / 箱" },
+        "D17DE": { price: "$380/kg", boxSpec: "" },
+        "D17E": { price: "$188/kg", boxSpec: "10k / 箱" },
+        "C31H": { price: "$42/樽", boxSpec: "6樽 / 箱" },
+        "C31G": { price: "$32/樽", boxSpec: "6樽 / 箱" },
+        "D19E": { price: "$460/盒", boxSpec: "24盒 / 箱" },
+        "D19ER": { price: "$388/盒", boxSpec: "20盒 / 箱" },
+        "D19EA": { price: "$328/盒", boxSpec: "20盒 / 箱" },
+        "D21": { price: "$192/盒", boxSpec: "10盒 / 箱" },
+        "D21A": { price: "$168/盒", boxSpec: "10盒 / 箱" },
+        "D21AA": { price: "$75/盒", boxSpec: "20包 / 箱" },
+        "D19EK": { price: "$188/盒", boxSpec: "24盒 / 箱" },
+        "D57A": { price: "$78/包", boxSpec: "20包 / 箱" },
+        "D51": { price: "$70/包", boxSpec: "8包 / 箱" },
+        "D57D": { price: "$188/盒", boxSpec: "10盒 / 箱" },
+        "D21D": { price: "$120/包", boxSpec: "16包 / 箱" },
+        "D51B": { price: "$28/包", boxSpec: "48包 / 箱" },
+        "D21FC": { price: "$24/盒", boxSpec: "" },
+        "D21FA": { price: "$42/盒", boxSpec: "" },
+        "D21FB": { price: "$138/盒", boxSpec: "" },
+        "D22J": { price: "$128/kg", boxSpec: "10kg / 箱" },
+        "D22L": { price: "$118/kg", boxSpec: "10kg / 箱" },
+        "D22": { price: "$129/kg", boxSpec: "10kg / 箱" },
+        "D22C": { price: "$122/kg", boxSpec: "10kg / 箱" },
+        "D22A": { price: "$135/kg", boxSpec: "10kg / 箱" },
+        "D22D": { price: "$123/kg", boxSpec: "10kg / 箱" },
+        "D22I": { price: "$110/kg", boxSpec: "10kg / 箱" },
+        "D22G": { price: "$104/kg", boxSpec: "10kg / 箱" },
+        "D22H": { price: "$45/包", boxSpec: "20包 / 箱" },
+        "D22E": { price: "$29/條", boxSpec: "" },
+        "D15B": { price: "$208/包", boxSpec: "15包 / 箱" },
+        "D22FA": { price: "$24/碟", boxSpec: "50包 / 箱" },
+        "D42A": { price: "$69/包", boxSpec: "10包 / 箱" },
+        "D42AB": { price: "$67/包", boxSpec: "10包 / 箱" },
+        "D22FB": { price: "$33/碟", boxSpec: "45包 / 箱" },
+        "D42AA": { price: "$18/條", boxSpec: "50條 / 箱" },
+        "D22FC": { price: "$51/碟", boxSpec: "25包 / 箱" },
+        "D46A": { price: "$68/包", boxSpec: "10包 / 箱" },
+        "D60D": { price: "$43/包", boxSpec: "20包 / 箱" },
+        "D46C": { price: "$25/包", boxSpec: "20包 / 箱" },
+        "D46B": { price: "$19/包", boxSpec: "40包 / 箱" },
+        "D46AA": { price: "$72/包", boxSpec: "12包 / 箱" },
+        "D46F": { price: "$71/包", boxSpec: "10包 / 箱" },
+        "D16BB": { price: "$14/包", boxSpec: "50條 / 箱" },
+        "D16BA": { price: "$14/包", boxSpec: "50條 / 箱" },
+        "D16": { price: "$9/條", boxSpec: "25條 / 箱" },
+        "D16AA": { price: "$6/包", boxSpec: "50包 / 箱" },
+        "D06A": { price: "$26/包", boxSpec: "20包 / 箱" },
+        "D68": { price: "$41/包", boxSpec: "10包 / 箱" },
+        "D06": { price: "$26/包", boxSpec: "20包 / 箱" },
+        "D68B": { price: "$10/包", boxSpec: "20包 / 箱" },
+        "D06C": { price: "$42/包", boxSpec: "10包 / 箱" },
+        "D52": { price: "$58/包", boxSpec: "8包 / 箱" },
+        "D52A": { price: "$13/包", boxSpec: "25包 / 箱" },
+        "D50": { price: "$132/包", boxSpec: "8包 / 箱" },
+        "D50AA": { price: "$33/包", boxSpec: "25包 / 箱" },
+        "D53": { price: "$88/包", boxSpec: "8包 / 箱" },
+        "D53A": { price: "$24/包", boxSpec: "25包 / 箱" },
+        "D54": { price: "$118/包", boxSpec: "8包 / 箱" },
+        "D54A": { price: "$26/包", boxSpec: "25包 / 箱" },
+        "D53B": { price: "$116/包", boxSpec: "8包 / 箱" },
+        "D52BA": { price: "$27/包", boxSpec: "25包 / 箱" },
+        "D50A": { price: "$145/包", boxSpec: "12包 / 箱" },
+        "D50B": { price: "$143/包", boxSpec: "12包 / 箱" },
+        "D68A": { price: "$38/包", boxSpec: "20包 / 箱" },
+        "D57": { price: "$108/包", boxSpec: "12包 / 箱" },
+        "D55": { price: "$205/包", boxSpec: "12包 / 箱" },
+        "D49B": { price: "$208/包", boxSpec: "5包 / 箱" },
+        "D49C": { price: "$125/包", boxSpec: "12包 / 箱" },
+        "D49": { price: "$175/包", boxSpec: "10盒 / 箱" },
+        "D50BB": { price: "$20/盒", boxSpec: "" },
+        "D84": { price: "$16/包", boxSpec: "20包 / 箱" },
+        "D96B": { price: "$23/包", boxSpec: "12包 / 箱" },
+        "C54": { price: "$20/包", boxSpec: "20包 / 箱" },
+        "D56": { price: "$115/包", boxSpec: "6盒 / 箱" },
+        "C35A": { price: "$128/包", boxSpec: "" },
+        "C35B": { price: "$388/包", boxSpec: "" },
+        "C30": { price: "$18/包", boxSpec: "20包 / 箱" },
+        "C67": { price: "$98/包", boxSpec: "" },
+        "C31F": { price: "$38/包", boxSpec: "30包 / 箱" },
+        "C30E": { price: "$32/罐", boxSpec: "24罐 / 箱" },
+        "D66A": { price: "$52/包", boxSpec: "20包 / 箱" },
+        "D09HC": { price: "$136/包", boxSpec: "10包 / 箱" },
+        "D09HA": { price: "$138/包", boxSpec: "10包 / 箱" },
+        "D09H": { price: "$140/包", boxSpec: "10包 / 箱" },
+        "D64": { price: "$118/包", boxSpec: "10包 / 箱" },
+        "D09HB": { price: "$88/包", boxSpec: "10包 / 箱" },
+        "D64AE": { price: "$125/包", boxSpec: "10包 / 箱" },
+        "D43": { price: "$55/包", boxSpec: "10包 / 箱" },
+        "F03": { price: "$80/盒", boxSpec: "12k / 箱" },
+        "D02B": { price: "$55/包", boxSpec: "12包 / 箱" },
+        "F03B": { price: "$18/包", boxSpec: "10包 / 箱" },
+        "D29": { price: "$75/包", boxSpec: "15kg / 箱" },
+        "D74A": { price: "$45/盒", boxSpec: "20盒 / 箱" },
+        "D97": { price: "$20/包", boxSpec: "20包 / 箱" },
+        "D74C": { price: "$68/包", boxSpec: "50包 / 箱" },
+        "D07G": { price: "$98/袋", boxSpec: "10袋 / 箱" },
+        "D39D": { price: "$1298/箱", boxSpec: "" },
+        "D39H": { price: "$59/包", boxSpec: "20包 / 箱" },
+        "D39DA": { price: "$50/隻", boxSpec: "" },
+        "D39HA": { price: "$32/包", boxSpec: "20包 / 箱" },
+        "D26": { price: "$68/磅", boxSpec: "50磅 / 箱" },
+        "D26D": { price: "$62/磅", boxSpec: "50磅 / 箱" },
+        "D80A": { price: "$88/包", boxSpec: "24包 / 箱" },
+        "F01DB": { price: "$60/打", boxSpec: "19打 / 箱" },
+        "D80AA": { price: "$20/包", boxSpec: "40包 / 箱" },
+        "F01GB": { price: "$98/包", boxSpec: "" },
+        "D80C": { price: "$78/包", boxSpec: "40包 / 箱" },
+        "D61HC": { price: "$28/包", boxSpec: "20包 / 箱" },
+        "D21BA": { price: "$16/碟", boxSpec: "30包 / 箱" },
+        "D03MB": { price: "$75/盒", boxSpec: "12盒 / 箱" },
+        "D71": { price: "$528/kg", boxSpec: "4.54kg / 箱" },
+        "D10ED": { price: "$39/碟", boxSpec: "30碟 / 箱" },
+        "D03LF": { price: "$228/盒", boxSpec: "" },
+        "D70": { price: "$218/KG", boxSpec: "4.54kg / 箱" },
+        "D03LJ": { price: "$208/盒", boxSpec: "6磚 / 箱" },
+        "D03LE": { price: "$178/盒", boxSpec: "10盒 / 箱" },
+        "D03LEA": { price: "$208/盒", boxSpec: "10盒 / 箱" },
+        "D03LC": { price: "$128/盒", boxSpec: "10盒 / 箱" },
+        "D03LK": { price: "$118/餅", boxSpec: "6磚 / 箱" },
+        "D03LB": { price: "$248/餅", boxSpec: "6磚 / 箱" },
+        "D03LCA": { price: "$118/盒", boxSpec: "10盒 / 箱" },
+        "D72C": { price: "$335/梳", boxSpec: "6梳 / 箱" },
+        "D72CA": { price: "$228/梳", boxSpec: "6梳 / 箱" },
+        "C58AB": { price: "$82/包", boxSpec: "12包 / 箱" },
+        "D72EC": { price: "$148/碟", boxSpec: "10包 / 箱" },
+        "D59D": { price: "$135/包", boxSpec: "20包 / 箱" },
+        "D72ED": { price: "$145/包", boxSpec: "20包 / 箱" },
+        "D59H": { price: "$140/包", boxSpec: "20包 / 箱" },
+        "D59EA": { price: "$84/罐", boxSpec: "12罐 / 箱" },
+        "D12": { price: "$112/盒", boxSpec: "10盒 / 箱" },
+        "C58": { price: "$34/罐", boxSpec: "24罐 / 箱" },
+        "C58A": { price: "$32/罐", boxSpec: "24罐 / 箱" },
+        "D12A": { price: "$110/盒", boxSpec: "10盒 / 箱" },
+        "C58AC": { price: "$52/包", boxSpec: "20包 / 箱" },
+        "D60G": { price: "$95/盒", boxSpec: "16包 / 箱" },
+        "E03": { price: "$52/包", boxSpec: "10包 / 箱" },
+        "E03K": { price: "$65/包", boxSpec: "20包 / 箱" },
+        "E03A": { price: "$50/包", boxSpec: "10包 / 箱" },
+        "E03F": { price: "$98/包", boxSpec: "10包 / 箱" },
+        "E11C": { price: "$46/包", boxSpec: "10包 / 箱" },
+        "D88DA": { price: "$98/包", boxSpec: "6包 / 箱" },
+        "E03JA": { price: "$68/包", boxSpec: "10包 / 箱" },
+        "D88C": { price: "$128/包", boxSpec: "6包 / 箱" },
+        "D76A": { price: "$38/kg", boxSpec: "10k / 箱" },
+        "M008C": { price: "$58/包", boxSpec: "10包 / 箱" },
+        "M008D": { price: "$42/包", boxSpec: "10包 / 箱" },
+        "M008E": { price: "$52/包", boxSpec: "6包 / 箱" },
+        "D88GA": { price: "$148/包", boxSpec: "6包 / 箱" },
+        "D88GB": { price: "$112/包", boxSpec: "6包 / 箱" },
+        "D88AD": { price: "$148/盒", boxSpec: "6盒 / 箱" },
+        "D88E": { price: "$138/盒", boxSpec: "6盒 / 箱" },
+        "D88A": { price: "$78/盒", boxSpec: "6盒 / 箱" },
+        "D88": { price: "$158/盒", boxSpec: "6盒 / 箱" },
+        "D88AC": { price: "$95/盒", boxSpec: "6盒 / 箱" },
+        "D88FA": { price: "$118/碟", boxSpec: "20碟 / 箱" },
+        "D88FG": { price: "$38/碟", boxSpec: "20碟 / 箱" },
+        "D88AB": { price: "$65/盒", boxSpec: "6盒 / 箱" },
+        "D88FB": { price: "$55/碟", boxSpec: "20碟 / 箱" },
+        "D88FF": { price: "$82/碟", boxSpec: "18碟 / 箱" },
+        "D88FD": { price: "$45/碟", boxSpec: "20碟 / 箱" },
+        "D88FH": { price: "$72/碟", boxSpec: "18碟 / 箱" },
+        "D88FC": { price: "$45/碟", boxSpec: "14碟 / 箱" },
+        "D88FE": { price: "$65/碟", boxSpec: "16碟 / 箱" },
+        "D30": { price: "$358/kg", boxSpec: "" },
+        "D30D": { price: "$158/包", boxSpec: "50包 / 箱" },
+        "D30A": { price: "$328/kg", boxSpec: "" },
+        "D30E": { price: "$58/包", boxSpec: "" },
+        "M004": { price: "$118/包", boxSpec: "10包 / 箱" },
+        "D30B": { price: "$235/kg", boxSpec: "" },
+        "H02AA": { price: "$28/塊", boxSpec: "" },
+        "M003BD": { price: "$176/包", boxSpec: "10包 / 箱" },
+        "M003M": { price: "$88/碟", boxSpec: "" },
+        "M007": { price: "$22/磅", boxSpec: "" },
+        "M003LA": { price: "$138/塊", boxSpec: "" },
+        "M003LB": { price: "$148/塊", boxSpec: "" },
+        "M003LAA": { price: "$550/kg", boxSpec: "" },
+        "M003LBA": { price: "$550/kg", boxSpec: "" },
+        "M006B": { price: "$100/kg", boxSpec: "20k / 箱" },
+        "M004B": { price: "$138/包", boxSpec: "20包 / 箱" },
+        "D99": { price: "$39/包", boxSpec: "12包 / 箱" },
+        "E06": { price: "$78/kg", boxSpec: "5k / 箱" },
+        "H02A": { price: "$39/包", boxSpec: "8包 / 箱" },
+        "E05": { price: "$38/包", boxSpec: "20包 / 箱" },
+        "H02": { price: "$88/包", boxSpec: "4包 / 箱" },
+        "D76B": { price: "$54/包", boxSpec: "10包 / 箱" },
+        "E06A": { price: "$44/包", boxSpec: "20包 / 箱" },
+        "M010": { price: "$100/kg", boxSpec: "4條 / 箱" },
+        "M010A": { price: "$155/包", boxSpec: "10包 / 箱" },
+        "E02": { price: "$20/包", boxSpec: "30包 / 箱" },
+        "C30C": { price: "$12/包", boxSpec: "10包 / 箱" },
+        "D41C": { price: "$28/包", boxSpec: "10包 / 箱" },
+        "D10E": { price: "$18/碟", boxSpec: "40包 / 箱" },
+        "D10EAA": { price: "$22/碟", boxSpec: "20包 / 箱" },
+        "D65": { price: "$71/包", boxSpec: "6包 / 箱" },
+        "D64BA": { price: "$39/包", boxSpec: "10包 / 箱" },
+        "D65C": { price: "$36/包", boxSpec: "12包 / 箱" },
+        "D64B": { price: "$34/包", boxSpec: "10包 / 箱" },
+        "D65AA": { price: "$105/包", boxSpec: "8包 / 箱" },
+        "E04B": { price: "$48/包", boxSpec: "10包 / 箱" },
+        "E04EA": { price: "$63/包", boxSpec: "6包 / 箱" },
+        "D61F": { price: "$26/包", boxSpec: "10包 / 箱" },
+        "E04C": { price: "$398/箱", boxSpec: "" },
+        "E08": { price: "$60/包", boxSpec: "6包 / 箱" },
+        "E08AA": { price: "$32/包", boxSpec: "24包 / 箱" },
+        "D01A": { price: "$38/包", boxSpec: "15盒 / 箱" },
+        "H03B": { price: "$275/箱", boxSpec: "" },
+        "D62A": { price: "$122/包", boxSpec: "6包 / 箱" },
+        "H01A": { price: "$36/包", boxSpec: "6包 / 箱" },
+        "H01G": { price: "$24/包", boxSpec: "12包 / 箱" },
+        "C60A": { price: "$78/包", boxSpec: "5包 / 箱" },
+        "D60F": { price: "$20/盒", boxSpec: "24盒 / 箱" },
+        "D65B": { price: "$148/包", boxSpec: "6包 / 箱" },
+        "H01E": { price: "$36/包", boxSpec: "6包 / 箱" },
+        "H01F": { price: "$22/包", boxSpec: "15包 / 箱" },
+        "H01": { price: "$33/包", boxSpec: "8包 / 箱" },
+        "E09A": { price: "$58/包", boxSpec: "10包 / 箱" },
+        "E11": { price: "$48/包", boxSpec: "6包 / 箱" },
+        "D39GA": { price: "$36/包", boxSpec: "20包 / 箱" },
+        "D65BB": { price: "$20/包", boxSpec: "24包 / 箱" },
+        "D65BA": { price: "$168/包", boxSpec: "6包 / 箱" },
+        "C29C": { price: "$18/包", boxSpec: "20盒 / 箱" },
+        "C29": { price: "$18/包", boxSpec: "20盒 / 箱" },
+        "C30B": { price: "$20/盒", boxSpec: "30盒 / 箱" },
+        "C47C": { price: "$102/盒", boxSpec: "12盒 / 箱" },
+        "W004": { price: "$260/支", boxSpec: "" },
+        "W005": { price: "$98/支", boxSpec: "6支 / 箱" },
+        "W003A": { price: "$208/支", boxSpec: "12支 / 箱" },
+        "W017A": { price: "$308/箱", boxSpec: "24支 / 箱" },
+        "W019": { price: "$368/支", boxSpec: "" },
+        "G04F": { price: "$288/箱", boxSpec: "20支 / 箱" },
+        "G04A": { price: "$288/箱", boxSpec: "20支 / 箱" },
+        "G03D": { price: "$178/箱", boxSpec: "30支 / 箱" },
+        "G04B": { price: "$288/箱", boxSpec: "20支 / 箱" },
+        "G03E": { price: "$195/箱", boxSpec: "30支 / 箱" },
+        "G04": { price: "$288/箱", boxSpec: "20支 / 箱" },
+        "G01AA": { price: "$125/箱", boxSpec: "30罐 / 箱" },
+        "G01BA": { price: "$125/箱", boxSpec: "30罐 / 箱" },
+        "G01CA": { price: "$125/箱", boxSpec: "30罐 / 箱" },
+        "G01DA": { price: "$125/箱", boxSpec: "30罐 / 箱" },
+        "C24A": { price: "$45/支", boxSpec: "10支 / 箱" },
+        "C26": { price: "$42/支", boxSpec: "9支 / 箱" },
+        "C24G": { price: "$65/支", boxSpec: "6支 / 箱" },
+        "C24F": { price: "$65/支", boxSpec: "6支 / 箱" },
+        "C24E": { price: "$62/支", boxSpec: "6支 / 箱" },
+        "C26A": { price: "$40/支", boxSpec: "12支 / 箱" },
+        "C26B": { price: "$58/支", boxSpec: "8支 / 箱" },
+        "C26AB": { price: "$65/支", boxSpec: "9支 / 箱" },
+        "C26G": { price: "$65/支", boxSpec: "6支 / 箱" },
+        "C24B": { price: "$52/支", boxSpec: "12支 / 箱" },
+        "C26C": { price: "$48/支", boxSpec: "6支 / 箱" },
+        "C28A": { price: "$65/包", boxSpec: "15支 / 箱" },
+        "C28B": { price: "$118/包", boxSpec: "10包 / 箱" },
+        "C15": { price: "$9/支", boxSpec: "100支 / 箱" },
+        "C14E": { price: "$27/支", boxSpec: "15支 / 箱" },
+        "C14I": { price: "$75/支", boxSpec: "6支 / 箱" },
+        "C14G": { price: "$34/支", boxSpec: "6支 / 箱" },
+        "C14DA": { price: "$38/支", boxSpec: "6支 / 箱" },
+        "C14J": { price: "$115/盒", boxSpec: "6盒 / 箱" },
+        "C14C": { price: "$14/支", boxSpec: "12支 / 箱" },
+        "C28": { price: "$65/包", boxSpec: "10包 / 箱" },
+        "C15C": { price: "$118/包", boxSpec: "6包 / 箱" },
+        "C28D": { price: "$58/包", boxSpec: "10包 / 箱" },
+        "C38A": { price: "$92/支", boxSpec: "6支 / 箱" },
+        "C25B": { price: "$59/支", boxSpec: "6支 / 箱" },
+        "C38": { price: "$102/支", boxSpec: "8支 / 箱" },
+        "C45": { price: "$72/支", boxSpec: "15支 / 箱" },
+        "C45A": { price: "$128/支", boxSpec: "6支 / 箱" },
+        "C38B": { price: "$70/支", boxSpec: "6支 / 箱" },
+        "C25": { price: "$45/支", boxSpec: "6支 / 箱" },
+        "C25C": { price: "$45/支", boxSpec: "6支 / 箱" },
+        "C79C": { price: "$98/包", boxSpec: "10包 / 箱" },
+        "C53F": { price: "$118/袋", boxSpec: "10袋 / 箱" },
+        "C45BA": { price: "$21/支", boxSpec: "12支 / 盒" },
+        "C36D": { price: "$38/支", boxSpec: "8支 / 箱" },
+        "C19B": { price: "$38/支", boxSpec: "8支 / 箱" },
+        "C36E": { price: "$268/桶", boxSpec: "" },
+        "C19C": { price: "$275/桶", boxSpec: "" },
+        "C22A": { price: "$368/桶", boxSpec: "" },
+        "C14GA": { price: "$378/桶", boxSpec: "" },
+        "C22D": { price: "$320/桶", boxSpec: "" },
+        "C20B": { price: "$285/桶", boxSpec: "" },
+        "C79": { price: "$370/桶", boxSpec: "" },
+        "C22E": { price: "$142/支", boxSpec: "6支 / 箱" },
+        "C22F": { price: "$45/支", boxSpec: "8支 / 箱" },
+        "C79B": { price: "$116/支", boxSpec: "10支 / 箱" },
+        "C20A": { price: "$34/支", boxSpec: "6支 / 箱" },
+        "C20BA": { price: "$88/支", boxSpec: "6支 / 箱" },
+        "C44A": { price: "$65/支", boxSpec: "6支 / 箱" },
+        "C22B": { price: "$72/支", boxSpec: "6支 / 箱" },
+        "C44": { price: "$44/支", boxSpec: "6支 / 箱" },
+        "C44C": { price: "$75/支", boxSpec: "6支 / 箱" },
+        "C25E": { price: "$82/支", boxSpec: "6支 / 箱" },
+        "C25G": { price: "$72/支", boxSpec: "6支 / 箱" },
+        "C25A": { price: "$48/支", boxSpec: "6支 / 箱" },
+        "C25J": { price: "$33/支", boxSpec: "6支 / 箱" },
+        "C26KB": { price: "$36/支", boxSpec: "12支 / 箱" },
+        "C25F": { price: "$118/支", boxSpec: "6支 / 箱" },
+        "C34C": { price: "$113/支", boxSpec: "6支 / 箱" },
+        "C34D": { price: "$112/支", boxSpec: "6支 / 箱" },
+        "C34E": { price: "$105/支", boxSpec: "6支 / 箱" },
+        "C34B": { price: "$118/支", boxSpec: "6支 / 箱" },
+        "C34A": { price: "$118/包", boxSpec: "10包 / 箱" },
+        "C27C": { price: "$105/樽", boxSpec: "" },
+        "C27D": { price: "$95/樽", boxSpec: "" },
+        "C56A": { price: "$33/包", boxSpec: "30包 / 箱" },
+        "C51C": { price: "$20/包", boxSpec: "20包 / 箱" },
+        "C60": { price: "$52/包", boxSpec: "10包 / 箱" },
+        "C51A": { price: "$12/包", boxSpec: "24包 / 箱" },
+        "C41": { price: "$82/包", boxSpec: "4包 / 箱" },
+        "C51": { price: "$12/支", boxSpec: "10支 / 排" },
+        "C23": { price: "$14/包", boxSpec: "12包 / 箱" },
+        "C56": { price: "$10/支", boxSpec: "10支 / 排" },
+        "C43": { price: "$16/包", boxSpec: "20包 / 箱" },
+        "C41A": { price: "$58/盒", boxSpec: "6盒 / 箱" },
+        "C61": { price: "$37/樽", boxSpec: "12樽 / 箱" },
+        "C51B": { price: "$22/支", boxSpec: "12支 / 排" },
+        "C42": { price: "$78/支", boxSpec: "6支 / 箱" },
+        "C43B": { price: "$9/包", boxSpec: "30包 / 箱" },
+        "C49": { price: "$168/樽", boxSpec: "12樽 / 箱" },
+        "C62A": { price: "$7/包", boxSpec: "24包 / 箱" },
+        "C67B": { price: "$128/包", boxSpec: "5包 / 箱" },
+        "C39": { price: "$17/盒", boxSpec: "60盒 / 箱" },
+        "C39A": { price: "$17/盒", boxSpec: "60盒 / 箱" },
+        "C39B": { price: "$17/盒", boxSpec: "60盒 / 箱" },
+        "C65": { price: "$53/包", boxSpec: "" },
+        "C53A": { price: "$24/包", boxSpec: "10包 / 箱" },
+        "C53": { price: "$18/包", boxSpec: "18包 / 箱" },
+        "C53B": { price: "$21/包", boxSpec: "10包 / 箱" },
+        "C53D": { price: "$22/包", boxSpec: "10包 / 箱" },
+        "C53G": { price: "$40/罐", boxSpec: "" },
+        "D82": { price: "$28/包", boxSpec: "8包 / 箱" },
+        "D82A": { price: "$32/包", boxSpec: "8包 / 箱" },
+        "D82E": { price: "$35/包", boxSpec: "8包 / 箱" },
+        "C52E": { price: "$128/箱", boxSpec: "40包 / 箱" },
+        "C62": { price: "$35/包", boxSpec: "10包 / 箱" },
+        "C52B": { price: "$13/包", boxSpec: "30包 / 箱" },
+        "C69D": { price: "$153/包", boxSpec: "5包 / 箱" },
+        "C07G": { price: "$10/個", boxSpec: "" },
+        "C17": { price: "$48/包", boxSpec: "" },
+        "C67C": { price: "$195/罐", boxSpec: "10罐 / 箱" },
+        "C61B": { price: "$15/袋", boxSpec: "50袋 / 箱" },
+        "C61A": { price: "$17/包", boxSpec: "30包 / 箱" },
+        "C27": { price: "$20/包", boxSpec: "10包 / 箱" },
+        "C27A": { price: "$18/包", boxSpec: "10包 / 箱" },
+        "C31B": { price: "$88/包", boxSpec: "" },
+        "C31EA": { price: "$98/罐", boxSpec: "20包 / 箱" },
+        "C27B": { price: "$28/樽", boxSpec: "24支 / 箱" },
+        "D81A": { price: "$25/包", boxSpec: "50包 / 箱" },
+        "C31C": { price: "$98/包", boxSpec: "16包 / 箱" },
+        "C09": { price: "$45/包", boxSpec: "20包 / 箱" },
+        "C09A": { price: "$45/包", boxSpec: "20包 / 箱" },
+        "C87B": { price: "$16/包", boxSpec: "20包 / 箱" },
+        "C31D": { price: "$45/包", boxSpec: "12包 / 箱" },
+        "C31": { price: "$10/包", boxSpec: "20條 / 箱" },
+        "C10AA": { price: "$50/包", boxSpec: "10包 / 箱" },
+        "C18A": { price: "$43/包", boxSpec: "84包 / 箱" },
+        "C18C": { price: "$41/包", boxSpec: "84包 / 箱" },
+        "C18E": { price: "$40/包", boxSpec: "50包 / 箱" },
+        "C18F": { price: "$88/包", boxSpec: "50包 / 箱" },
+        "C57": { price: "$76/包", boxSpec: "10包 / 箱" },
+        "C10A": { price: "$24/包", boxSpec: "50包 / 箱" },
+        "C18G": { price: "$41/包", boxSpec: "90包 / 箱" },
+        "C57A": { price: "$31/包", boxSpec: "50包 / 箱" },
+        "C01B": { price: "$12/包", boxSpec: "" },
+        "C01E": { price: "$15/包", boxSpec: "" },
+        "C03": { price: "$138/包", boxSpec: "" },
+        "C03A": { price: "$20/罐", boxSpec: "35樽 / 箱" },
+        "C25H": { price: "$65/支", boxSpec: "6支 / 箱" },
+        "C50BA": { price: "$50/盒", boxSpec: "10盒 / 箱" },
+        "C50BB": { price: "$50/盒", boxSpec: "10盒 / 箱" },
+        "C50BC": { price: "$50/盒", boxSpec: "10盒 / 箱" },
+        "C70": { price: "$50/包", boxSpec: "6包 / 箱" },
+        "C92": { price: "$125/包", boxSpec: "" },
+        "C914SC": { price: "$168/卷", boxSpec: "" },
+        "C912SC": { price: "$158/卷", boxSpec: "" },
+        "C910SC": { price: "$128/卷", boxSpec: "" },
+        "C613": { price: "$410/卷", boxSpec: "" },
+        "C04C": { price: "$38/包", boxSpec: "" },
+        "C50AA": { price: "$28/盒", boxSpec: "50盒 / 箱" },
+        "C50AB": { price: "$28/盒", boxSpec: "50盒 / 箱" },
+        "C43A": { price: "$65/包", boxSpec: "20包 / 箱" },
+        "C07": { price: "$30/扎", boxSpec: "100件 / 箱" },
+        "C07A": { price: "$30/扎", boxSpec: "100件 / 箱" },
+        "C50D": { price: "$78/支", boxSpec: "" }
+    };
+    // 🔥 新增：預設直接顯示價格的 VIP 客戶白名單
+    const alwaysShowPriceClients = [
+        "A2405",   // 黑門(尖)壽司
+        "A2405A",  // 黑門(尖)廚房
+        "A2405B",  // 黑門(銅)壽司
+        "A2405BA"  // 黑門(銅)廚房
+    ];
+    // 🔥 彩蛋：全局價格顯示開關與連點偵測器
+    let showPricesGlobally = false; // 預設隱藏
+    let priceClickCount = 0;
+    let priceClickTimer;
+
+    function handlePriceToggle() {
+        priceClickCount++;
+        clearTimeout(priceClickTimer);
+        // 必須在 800 毫秒內連續點擊
+        priceClickTimer = setTimeout(() => { priceClickCount = 0; }, 800); 
+        
+        if (priceClickCount === 5) {
+            showPricesGlobally = !showPricesGlobally;
+            priceClickCount = 0;
+            
+            // 重新渲染畫面以顯示/隱藏價格
+            if (document.getElementById('tab-all').style.display !== 'none') {
+                filterAllProducts(); // 如果在全部產品頁，重新搜尋/渲染
+            } else {
+                renderFrequent();    // 如果在常用清單，重新渲染
+            }
+            if(document.getElementById('cartModal').classList.contains('show')) {
+                renderCartModalItems();
+            }
+            
+            // 給業務員一個帥氣的提示
+            alert(showPricesGlobally ? "🔓 價格顯示模式已開啟！(僅限本機查看)" : "🔒 價格顯示模式已關閉！");
+        }
+    }
+    // 🔥 0. 特殊彈窗規則設定 (白名單)
+    const conditionalPopupRules = {
+        "D31A": ["A1135UB#A"],  // 大瀛喜(官)
+        "C53B": ["A1781#A"],    // 鉄人旨花(銅)
+        "C39A": ["A1781#A"],    // 鉄人旨花(銅)
+        "C54":  ["A1781#A"],    // 鉄人旨花(銅)
+        
+        // --- 新增規則 ---
+        "D84":  ["A1135K#A", "A1135KB#A"], // 殿(尖) & 殿(旺) - 急凍枝豆
+        "D52":  ["A1135K#A", "A1135KB#A"], // 殿(尖) & 殿(旺) - 中華沙律
+        "D42AA":["A1761#A"],               // 松本(西環) - 獨立開邊青魚
+        "H02A": ["A1618B#A"]  // 帝王(旺角) - 日式芝士漢堡扒
+    };
+
+    // 🔥🔥 多部門設定 (Multi-Department Config) 🔥🔥
+    const multiDeptRules = {
+        "A1683A#A": {
+            name: "淥鼎記(官)",
+            depts: [
+                { id: 'sushi', name: '壽司部 (默認)', list: ["D47B", "C01", "D69", "D46C", "D07A", "D46A", "A03", "D09D", "D10EAA", "C09", "C09A", "C29", "C50AB", "D10JAA", "C18C", "C27A", "A07C", "A12A", "C01CK", "C18J", "C19B"] },
+                { id: 'kitchen', name: '廚房部', list: ["C04"] },
+                { id: 'dimsum', name: '點心部', list: ["D07BA", "C18E"] }
+            ]
+        },
+        "A1683C#A": {
+            name: "淥鼎記(旺)",
+            depts: [
+                { id: 'sushi', name: '壽司部 (默認)', list: ["D47B", "D07A", "D46C", "C09", "C01", "D46A", "D06", "C01CA", "C24A", "C04", "C01CK", "D48A", "D09D", "C29", "D22E", "C18C", "C24F", "C15C", "C19B", "C26"] },
+                { id: 'kitchen', name: '廚房部', list: ["C04"] },
+                { id: 'dimsum', name: '點心部', list: ["D96B", "C03"] }
+            ]
+        },
+        "A2262A#P": {
+            name: "九丁目",
+            depts: [
+                { id: 'sushi', name: '壽司部 (默認)', list: ["C01","D21","D46AA","C27A","D10KC","B01","C28B","D47","D17D","D03A","D59EA","D10","C04","D09HA","D03"] },
+                { id: 'kitchen', name: '廚房部', list: ["D10EAA","D12A","C43","C53B","C62","E06A","D64BA","H01F","H01G","E04C","C14E","E02","C05A","D10ED","C19C","C14I","C45","C41A","C14GA","C36E","C39","C39A","D88AD","C05","C38","C20A","D30","C10A","C45A","C07A","C61"] }
+            ]
+        }
+    };
+
+    // 2. 初始化核心變數
+    let currentClientBoxItems = []; 
+    let currentSalesPhone = ""; 
+    let salesID = "A"; 
+    let customerName = ""; 
+    let customerCode = "";
+    
+    // 儲存鍵值
+    let storageKey = ""; 
+    let profileKey = ""; 
+    let itemCounts = {}; 
+    let learnedFrequent = []; 
+    let presetFrequent = []; 
+    
+    // 多部門變數
+    let isMultiDept = false;
+    let currentDeptId = null;
+    let deptCarts = {}; // 儲存各部門的購物車 { 'sushi': {cart, units}, 'kitchen': ... }
+    let deptModal = null;
+
+    // 暫存變數
+    let pendingSendMode = null;
+    let tempNoteDecision = false;
+    let noteModal = null;
+    let pendingManualQty = null;
+
+    // 缺貨清單
+    outOfStockCodes = ["C51BB", "C92", "C01E", "C18J", "D03B", "D03E", "D09AB", "D10KA", "D25", "D62", "D39C", "D09M", "D60H", "D79AC", "A06F", "A07C", "A08", "A12A", "A12B", "AJ1", "AJ4", "AJ3", "AJ6"];
+
+    // 🔥 新增：業務員專屬缺貨清單 (填入代碼即可)
+    const salesSpecificOOS = {
+        "A": [], // 只有 Sales A (志哥) 的客戶會看到這裡面的產品缺貨
+        "B": [],      // Sales B 的專屬缺貨
+        "C": [],      // Sales P 的專屬缺貨
+        "D": []       // Sales C 的專屬缺貨
+    };
+
+    // 🔥 新增：智慧判斷產品是否缺貨的核心函數 (已將開關內建，防止變數衝突崩潰)
+    function isProductOOS(c) {
+        // ==========================================
+        // 🔥 日本鮮貨專區設定 (內建於函數中，絕對安全)
+        // ==========================================
+        let isJapanFreshOpen = true; // 總開關：false = 預設全面缺貨，true = 開放購買
+        let japanFreshList = ["B67A", "B67B", "B67C", "B04", "B55A", "B74C", "B20E", "B20G", "B74G", "B55D", "B09", "B13", "B08SB", "B55E", "B74F", "B02E", "B08TA"];
+
+        // 1. 🔥 日本鮮貨「一鍵開關」攔截 (最高優先級)
+        if (isJapanFreshOpen === false && japanFreshList.includes(c)) {
+            return true; // 開關關閉且為日本鮮貨，強制回報為缺貨！
+        }
+
+        // 2. 原本的全局缺貨邏輯
+        if (typeof outOfStockCodes !== 'undefined' && outOfStockCodes.includes(c)) {
+            return true;
+        }
+
+        // 3. 特定客戶專屬的「黑名單缺貨」設定 (客戶專屬 OOS)
+        // 格式： "產品代碼": ["客戶編號開頭1", "客戶編號開頭2"]
+        let conditionalOOS = {
+            "A03": ["A2348"], //龍亭全線不給加拿大海膽 🔥 記得這行最後要加逗號！
+            
+            // 🔥 茹壽司(大埔) 全部三文魚 lock
+            "B14": ["W3982#P"],
+            "B14C": ["W3982#P"],
+            "B14AA": ["W3982#P"],
+            "B14H": ["W3982#P"]
+        };
+        if (conditionalOOS[c]) {
+            // 檢查當前登入的客戶編號，是否以我們設定的字首開頭
+            let isTargetClient = conditionalOOS[c].some(prefix => customerCode.startsWith(prefix));
+            if (isTargetClient) {
+                return true; // 命中黑名單，強制回報為缺貨！
+            }
+        }
+
+        return false;
+    }
+
+    // ==========================================
+    // 🚀 海膽強制置頂與缺貨隱藏大腦 (完美同步黑名單版)
+    // ==========================================
+    (function applyTopItems() {
+        const topItems = ["A03", "A08", "A07C", "A06F"];
+        
+        for (const customerId in clientDB) {
+            if (clientDB.hasOwnProperty(customerId)) {
+                let originalList = clientDB[customerId].list;
+                
+                // 🔥 核心修復：在為「這個客戶」排隊時，執行專屬的缺貨檢查
+                let availableTopItems = topItems.filter(item => {
+                    // 1. 檢查全域缺貨
+                    if (typeof outOfStockCodes !== 'undefined' && outOfStockCodes.includes(item)) return false;
+
+                    // 2. 檢查針對「這個特定客戶」的黑名單 (conditionalOOS)
+                    // 這裡我們直接把剛剛寫在 isProductOOS 裡的黑名單邏輯搬過來
+                    let conditionalOOS = {
+                        "A03": ["A2348"] 
+                    };
+
+                    if (conditionalOOS[item]) {
+                        // 檢查當前的 customerId 是否匹配黑名單開頭
+                        let isBlacklisted = conditionalOOS[item].some(prefix => customerId.startsWith(prefix));
+                        if (isBlacklisted) return false; // 如果在黑名單裡，就過濾掉
+                    }
+
+                    return true; // 沒中招，代表有貨
+                });
+                
+                // 2. 去重：把這 4 款海膽從客戶原本的清單中剔除
+                let filteredList = originalList.filter(item => !topItems.includes(item));
+                
+                // 3. 完美重組
+                clientDB[customerId].list = [...availableTopItems, ...filteredList];
+            }
+        }
+    })();
+    const eelProducts = ["D22J", "D22L", "D22", "D22C", "D22A", "D22D", "D22I", "D22G"];
+    const weightedProducts = ["D61B", "D61C", "D18A", "D17E", "D17C", "D69E", "D17D", "D17DD", "D17G", "D17DE", "B14", "C22F", "D69B", "M007", "D52BA", "C51", "C56"];
+    const stepTenCodes = ["C07", "C07A"];
+    
+    // 產品清單
+    const fullCatalog = [
+        { cat: "環球海膽", items: ["加拿大海膽 (A03)", "紫海膽(膠盒) (A07C)", "澳洲海膽 (A08)", "馬糞海膽(膠盒) (A06F)",  "練海膽醬 (C59)", "凍海膽漿 (D01)", "急凍特價海膽 (A00A)", "墨西哥海膽 (A12A)", "墨西哥海膽10格 (A12B)", "凍熟馬糞膽 (A06E)"] },
+        { cat: "日本海膽", items: ["日本海膽A Grade(直排) (AJ1)", "日本海膽A Grade(亂排) (AJ4)", "日本海膽B Grade(亂排) (AJ3)", "鹽水海膽 (AJ6)"] },
+        { cat: "鮮活海產類", items: ["活赤貝 (B01)", "鮮油甘魚（原條） (B50)", "鮮三文魚（原條） (B14)", "鮮三文魚 (箱取3條) (B14C)", "鮮三文魚(加工-箱取6邊) (B14AA)",  "鮮三文魚柳 (B14H)"] },
+        { cat: "日本鮮貨<span class='fresh-notice'>逢星期二、五到港，需提前預定</span>", items: ["L鮮大拖羅腹1（赤身附） (B67A)", "S鮮大拖羅腹1（赤身附） (B67AA)", "鮮大拖羅腹2（赤身附） (B67B)", "鮮吞拿魚赤身（去血合） (B67C)", "鮮油甘魚 (B50)", "鮮油甘柳（半邊） (B50C)", "池魚王 (B55)", "細池魚 (B55A)", "間八 (B04)", "金目鯛 (B74C)", "蜜柑鯛 (B20E)", "真鯛 (B20G)", "平目 (B74G)", "魴鮄 (B55D)", "太刀魚 (B55E)", "伊左木 (B74F)", "鯖魚 (B73)", "金目池王雜魚箱 (B74A)", "活北寄貝 (B09)", "活粒貝 (B02E)", "鮮帶子肉(生食用)(限星期五供應) (B13)", "令和之怪物生蠔 (B08SB)", "即食生蠔100g (B08TA)"] },
+        { cat: "新鮮蔬菜/裝飾花葉", items: ["大葉 (C01)", "綠楓葉 (C01FA)", "紅楓葉 (C01FB)", "日本小菊（黃） (C01CA)", "青椒仔 (C01CJ)", "萬能蔥 (C01CH)", "迷你食用玫瑰 (C01CO)", "南瓜 (C05)", "竹葉 (C04)", "三支葉 (C01F)", "花穗紫蘇 (C01CB)", "水菜 (C01CK)", "立桂 (C01CG)", "紅椒絲 (C01D)", "日本番薯 (C05A)"] },
+        { cat: "刺身壽司用料（蝦類）", items: ["牡丹蝦L(黑盒) (D03A)", "牡丹蝦XL(黑盒) (D03)",  "牡丹蝦J(黑盒) (D03B)", "牡丹蝦J(ATC) (D04C)", "牡丹蝦XJ(黑盒) (D03E)", "牡丹蝦XJ(ATC) (D04D)", "俄羅斯牡丹J (D03EB)", "俄羅斯牡丹XJ (D03EBA)", "阿根廷赤蝦 L1 (D10JA)", "阿根廷赤蝦 L2 (D10JAA)", "有頭甜蝦 2L (D10)", "有頭甜蝦 3L (D10A)", "天使蝦 (D10M)", "海赤蝦8L (D10JE)", "海赤蝦9L (D10JD)", "無頭甜蝦M50 (D10K)", "無頭甜蝦L50 (D10KC)", "無頭甜蝦L30 (D10KA)", "熟蝦 3L (D03DD)", "熟蝦 4L (D03DC)", "虎蝦刺身8g (D10N)", "虎蝦刺身10g (D10NA)", "海膽蝦2L (D03G)", "玻璃蝦3L (D03CA)", "熟蝦 7L (D03DA)", "熟蝦 8L (D03D)"] },
+        { cat: "刺身壽司用料（帶子及貝殼類）", items: ["日本刺身帶子 5S (D09GA)", "日本刺身帶子 4S (D09D)", "日本刺身帶子 3S (D09B)", "日本刺身帶子 2S (D09F)", "日本刺身帶子 S (D09A)", "日本刺身帶子 M (D09)", "日本刺身帶子 L (D09C)", "日本刺身帶子 2L (D09M)", "刺身帶子S 500g (D09AB)", "調味扇貝切片8g (D09LA)", "北寄貝L (1K裝) (D47A)", "北寄貝M (1K裝) (D47)", "北寄貝片 (D47B)", "馬刀貝6g (D07)", "馬刀貝10g (D07A)", "赤貝肉21/25 (D48A)", "赤貝肉16/20 (D48B)", "赤貝片7g (D48E)", "赤貝片8g (D48G)", "刺身海螺片 (D07F)", "刺身赤螺片 (D07BA)", "榮螺片 (D07B)", "象拔蚌片 (D44B)", "冰山蚌片刺身 (D44D)"] },
+        { cat: "刺身壽司用料（魚類）", items: ["急凍油甘魚柳（半邊） (D69)", "螢光魷魚沖漬 (D41AB)", "油甘魚鮫 (D69B)", "急凍油甘魚頭 (D69E)", "凍熟螢光魷魚 (D41F)", "日本紋甲魷魚500g (D39B)", "越南紋甲魷魚500g (D39C)", "1K紋甲魷魚 (D39BA)", "墨魚片(8g) (D39)", "刺身池魚片 (D62)", "八爪魚切粒 (D05F)", "中國大八爪 (D05C)", "日本大八爪AAA (D05)", "八爪魚片 (D05B)", "A級八爪魚片 (D05BA)", "左口魚邊刺身1K（日本） (D58A)", "左口魚邊刺身20片 (D58)", "左口魚邊刺身500g（日本） (D58C)", "左口魚邊刺身500g（中國） (D58B)", "台灣鯛魚柳 (D61C)", "醋青魚柳 (D42)", "安康魚肝 (D31A)", "中國鯛魚柳 (D61B)", "冰頭漬 (D83)", "針魚片 (D25)", "大劍魚腩(有皮) (D18)", "細劍魚腩(有皮) (D18A)"] }, 
+        { cat: "刺身壽司用料（吞拿魚/TORO）", items: ["日本大TORO (D17D)", "日本中TORO (D17DD)", "赤身A（日本） (D17G)", "急凍腦天 (D17DE)", "吞拿魚酒盜（紅） (C31H)", "吞拿魚蓉500g (D79)", "拖羅油 (D79A)", "吞拿魚蓉300g (D79AC)", "吞拿魚4A (D17C)", "印尼中拖羅 (D17E)", "鰹魚酒盜（黃） (C31G)"] },
+        { cat: "刺身壽司用料（魚籽類）", items: ["三文魚籽（山十） (D19ER)", "大粒蟹籽 (D21)", "中粒蟹籽 (D21A)", "鱒魚籽（醬油漬） (D19EA)", "黑色飛魚籽 (D21AA)", "250g裝三文魚籽 (D19EK)", "明太子蓉 (D57A)", "明太子1kg (D57D)", "希靈魚籽(6條) (D51)", "日本芝士蟹籽 (D21D)", "希靈魚籽（獨立包裝） (D51B)", "鱘魚子醬5g (D21FC)", "鱘魚子醬10g (D21FA)", "鱘魚子醬30g (D21FB)", "川秀三文魚籽 (D19E)"] }, 
+        { cat: "蒲燒鰻魚/鯖魚", items: ["蒲燒鰻魚 30尾 (D22J)", "蒲燒鰻魚 35尾 (D22L)", "蒲燒鰻魚 40尾 (D22)", "蒲燒鰻魚 45尾 (D22C)", "蒲燒鰻魚 50尾 (D22A)", "蒲燒鰻魚 60尾 (D22D)", "蒲燒鰻魚 80尾 (D22I)", "蒲燒鰻魚 100尾 (D22G)", "鰻魚粒 (D22H)", "原條海鰻(穴子) (D15B)", "開邊青魚100尾 (D42A)", "開邊青魚70尾 (D42AB)", "獨立開邊青魚 (D42AA)", "真空原條鰻魚 (D22E)", "鰻魚片8g (D22FA)", "鰻魚片10g (D22FB)", "鰻魚片16g (D22FC)"] },
+        { cat: "刺身壽司用料（蟹柳/其他）", items: ["仿皇帝淨蟹棒肉（K裝） (D46A)", "仿皇帝蟹柳（20條/包） (D46AA)", "泰國仿松葉蟹棒 (D46B)", "竹輪卷 (D16AA)","白鬆弛熊魚蛋 (D16BB)", "黃鬆弛熊魚蛋 (D16BA)", "臺灣貴妃鮑片 (D66A)", "味付三角油楊 (D68)", "無味油楊 (D68B)", "味付四角油楊 (D68A)", "大崎蟹柳 (D60D)", "大勝蟹柳 (D46C)", "珍寶蟹棒 (D46F)", "鳴門卷 (D16)", "厚燒玉子 (D06A)", "日本壽司蛋 (D06)", "切絲蛋 (D06C)"] },
+        { cat: "軍艦和日式小食", items: ["中華沙律2kg (D52)", "芝麻八爪仔2kg (D50)", "味附螺肉2kg (D53)", "帶子裙邊2kg (D54)", "味附墨魚仔2kg (D53B)", "芥辣熟八爪魚1K (D50A)", "明太子沙律(中國) (D57)", "黃金魷魚 (D49)", "中華沙律400g (D52A)", "味付螺肉400g (D53A)", "芝麻八爪魚400g (D50AA)", "帶子裙邊400g (D54A)", "味附海蜇400g (D52BA)", "芥辣生八爪魚1K (D50B)", "龍蝦沙律 (D55)", "櫻花魷魚 (D49B)", "海膽魷魚（日本） (D49C)", "芥辣生八爪魚100g (D50BB)", "北寄貝沙律 (D56)", "凍柚子皮 (C31F)", "急凍枝豆 (D84)", "燒雪魚棒 (C54)", "味淋魚乾 (C35A)", "紅魚鬆粉 (C67)", "十勝紅豆 (C30E)", "美國LIGO粟米粒 (D96B)", "迷你燒甜薯 (C30)"] },
+        { cat: "急凍海產類--1", items: ["熟帆立貝M (D09HC)", "熟帆立貝L (D09HA)", "熟帆立貝2L (D09H)", "熟帆立貝5S (D09HB)", "半殼元貝8-10cm (D43)", "扇貝柱IQ (熟食) (D02B)", "加拿大翡翠螺 (D29)", "帶殼即食蜆 (D97)", "急凍東風螺 (D07G)", "廣島蠔2L (D64)", "廣島蠔3L (D64AE)", "半殼青口M (F03)", "智利藍青口40/70 (F03B)", "日式磯煮鮑魚 (D74A)", "滋味鮑魚肉200g (D74C)"] },
+        { cat: "急凍海產類--2", items: ["原隻魷魚桶26/30 (D39D)", "原隻魷魚桶(獨立) (D39DA)", "阿根廷魷魚一夜干 (D39HA)", "銀鱈魚5-7磅 (D26)", "韓國半殼蠔 (F01DB)", "急凍殼付生蠔(刺身級) (F01GB)", "原味無骨魚塊 (D61HC)", "日本魷魚一夜干(2隻裝) (D39H)", "煙三文魚500g (D80A)", "煙三文魚100g (D80AA)", "急凍三文魚柳 (D80C)"] },
+        { cat: "急凍海產類--3", items: ["多春魚 (D21BA)", "生龍蝦尾 (D71)", "有頭虎蝦 4/6 (D03LF)", "有頭虎蝦 6/8 (D03LEA)", "有頭虎蝦 8/10 (D03LE)", "有頭虎蝦 13/15 (D03LC)", "有頭虎蝦 16/20 (D03LCA)", "原隻熟蝦 (D03MB)", "天婦羅蝦5L (D10ED)", "急凍熟波斯頓龍蝦 (D70)", "蝦仁磚21/25 (D03LJ)", "蝦仁磚70/90 (D03LK)", "無頭虎蝦16/20 (D03LB)"] },
+        { cat: "急凍海產類--4", items: ["熟帝皇蟹腳4L (D72CA)", "生帝皇蟹腳4L (D72C)", "蟹膏（竹田） (C58)", "越河蟹膏300g (C58AB)", "越河蟹蓋 (C58AC)", "松葉蟹肉碎 (D59D)", "軟殼蟹(大，約8隻) (D12)", "龍蝦膏 (C58A)", "混合鱈蟹肉500g (D59H)", "軟殼蟹(細，約9隻) (D12A)", "二本爪M (D60G)", "二本爪L (D60H)", "熟蟹拐棒500g (D72EC)", "熟雪蟹棒肉L (D72ED)", "罐頭蟹肉CLAW (D59EA)"] },
+        { cat: "肉類1", items: ["手羽明太子雞翼 (E03)", "手羽芝士豬肉雞翼 (E03A)", "生雞膝軟骨粒 (D88C)", "芝麻雞翼 (E03F)", "明太子雞翼（日本） (E03K)", "無激素雞扒 (M008C)", "日式炭燒雞扒 (E03JA)", "煙鴨胸 (D76A)", "巴西雞扒 (M008E)", "雞中翼（烏克蘭） (M008D)", "華味鳥雞腎 (D88GA)", "華味鳥雞心肝 (D88GB)", "CP炸雞軟骨粒1kg (D88DA)", "鹽酥雞 (E11C)", "雞骨腸 (E02)"] },
+        { cat: "肉類2", items: ["免治雞肉棒 (D88AD)", "開邊生雞翼串 (D88E)", "炭燒雞腿肉串（盒裝） (D88A)", "秘制五花腩串（碟裝） (D88FG)", "秘制雞皮串（碟裝） (D88FD)", "雞腿肉串（碟裝） (D88FE)", "雞軟骨串 (D88)", "生雞皮串（盒裝） (D88AB)", "生雞腎串(盒裝) (D88AC)", "白鱔串（碟裝） (D88FA)", "秘制肥腸（碟裝） (D88FB)", "雞腎串（碟裝） (D88FF)", "羊肉串（碟裝） (D88FH)", "雞亦串（碟裝） (D88FC)"] },
+        { cat: "肉類3", items: ["中國鵝肝 (D30)", "紅酒鵝肝 (D30A)", "鵝肝片 (D30D)", "金磚鵝肝片（紅酒味） (D30E)", "一口牛肉粒 (M004)", "和牛漢堡扒 (H02AA)", "A4和牛肉眼扒 (M003LA)", "A4和牛肉眼（抄碼） (M003LAA)", "中國鴨肝 (D30B)", "美國肥牛片2K裝 (M003BD)", "巴西牛舌(直條) (M007)", "A4和牛西冷扒 (M003LB)", "A4和牛西冷（抄碼） (M003LBA)"] },
+        { cat: "肉類4", items: ["黑豚肉眼（日本） (M010)", "內蒙古法式羊扒 (M006B)", "一口豚肉 (M004B)", "杜洛克風乾火腿片 (D99)", "日式原條叉燒 (E06)", "日式芝士漢堡扒60g (H02A)", "豬軟骨 (E05)", "日式漢堡扒 (H02)", "煙肉片 (D76B)", "日式叉燒片 (E06A)", "豚肉片2K裝 (M010A)", "香芋地瓜丸 (C30C)", "炸魷魚圈 (D41C)"] },
+        { cat: "日式炸物1", items: ["20g吉列蝦(白糠) (D10E)", "25g吉列蝦（黃糠） (D10EAA)", "KS 芝士年糕 (D65)", "日本吉列蠔 (D64BA)", "日本炸年糕串 (D65C)", "中國吉列蠔 (D64B)", "一口炸芝士 (D65AA)", "包裝吉列豬扒130g (E04EA)", "包裝吉列豬扒100g (E04B)","吉列魚柳 (D61F)", "原箱吉列豬扒130g (E04C)", "日式煎菜肉餃子 (E08)", "黑毛豬炸肉餅 (H03B)", "熔岩海膽魚餅 (D01A)", "炸池魚仔 (D62A)"] },
+        { cat: "日式炸物2", items: ["吉列牛肉薯餅 (H01A)", "甘栗紫薯餅 (H01F)", "吉列南瓜薯餅 (H01E)", "蟹肉忌廉薯餅 (H01)", "芝士薯餅 (H01G)", "雞皮餃子 (E08AA)", "冷凍面包糠 (C60A)", "炸蟹鉗 (D60F)", "拉絲芝士碎 (D65B)", "日式章魚燒50粒 (E09A)", "日式炸雞塊 (E11)", "天婦羅魷魚500g (D39GA)", "車打芝士片12片 (D65BB)", "雙色芝士碎 (D65BA)"] },
+        { cat: "日式甜品/飲料", items: ["忌廉泡芙 (C29C)", "紅豆和果子 (C30B)", "朱古力泡芙 (C29)", "芝士蛋糕 (C47C)", "獺祭三割九分純米大吟醸 (W004)", "京姬匠純米大吟醸 (W005)", "大嶺三粒米山田錦 (W003A)", "ORION沖繩支裝生啤 (W017A)", "富士山威士忌 (W019)", "木村富士山柚子梳打 (G04F)", "波子汽水(白檸) (G03D)", "木村蜜瓜味汽水 (G04A)", "木村水蜜桃味汽水 (G04B)", "菠蘿波子汽水 (G03E)", "木村蘋果味汽水 (G04)", "Sangaria氣水 橙味 (G01AA)", "Sangaria氣水 原味 (G01BA)", "Sangaria氣水 蜜瓜味 (G01CA)", "Sangaria氣水 提子味 (G01DA)"] },
+        { cat: "調味料", items: ["QP沙律醬 (C24A)", "丘比凱撒沙律汁 (C24G)", "丘比焙煎芝麻沙律汁 (C24F)", "丘比日式沙律汁 (C24E)", "KENKO胡麻沙律汁 (C26)", "KENKO蒜蓉牛油汁 (C26A)", "KENKO蜂蜜芥末醬 (C26AB)", "食研和風沙律汁 (C24B)", "山葵沙律汁 (C26B)", "東字冷面汁（4倍濃縮） (C26G)", "KENKO柚子沙律汁 (C26C)", "日本GFC急凍芥辣 (C28A)", "金印芥茉粉 (C28B)", "S&B支裝青芥辣 (C15)", "東字淡口豉油 (C14E)", "溜溜豉油 (C14I)", "萬字豉油（支裝） (C14G)", "魚生豉油（豐泉） (C14DA)", "日本外賣豉油包 (C14J)", "東丸魚生豉油 (C14C)", "勁辣芥茉粉 (C28)", "食研迷你芥辣包 (C15C)", "山葵醬油漬 (C28D)", "日本東字九州拉麵汁 (C38A)", "5號拉麵汁 (C38)", "桃屋朝鮮醬 (C45)", "神戶鰻魚汁 (C25)", "豐泉鰻魚汁 (C25C)", "神戶朝鮮醬 (C25B)", "地獄拉麵汁 (C45A)", "豐泉白湯拉麺汁 (C38B)", "福泉鰻魚汁 (C25G)", "日本黑蒜油 (C79C)", "紅葉辣椒醬 (C45BA)", "味噌湯包 (C53F)", "煮酒（支裝） (C36D)", "味醂（支裝） (C19B)", "桶裝煮酒 (C36E)", "桶裝味醂 (C19C)", "桶裝萬字豉油 (C14GA)", "優選醋 (C22D)", "白菊醋（麥近） (C20B)", "大豆白鮫油 (C79)", "江戶前赤醋 (C22E)","黑醋 (C22F)", "日清麻油1.5L（大支） (C79B)", "穀物醋(麥近) (C20A)", "柚子醋（麥近） (C20BA)", "大滝牛肉火鍋汁 (C42)", "荏原燒肉汁 (C44A)", "味付檸醋 (C22B)", "舵手豬扒汁 (C44)", "日式燒雞汁 (C44C)", "生姜燒（豐泉） (C25E)", "神戶燒肉汁 (C25A)", "神戶壽喜燒汁 (C25J)", "萬字白昆布木魚汁 (C26KB)", "食研原味烤肉醬 (C34C)", "食研照燒汁 (C25F)", "食研薑味烤肉醬 (C34D)", "食研蒜味烤肉醬 (C34E)", "食研山賊燒醬（黑椒汁） (C34B)", "食研什錦海藻 (C34A)", "薑蓉 (C27C)", "蒜蓉 (C27D)", "S&B七味粉(包裝) (C56A)", "炸雞粉 (C60)", "木魚花 (C41)", "木魚絲 (C23)", "昭和天婦羅粉 (C43)", "韓國柚子蜜 (C61)", "上白糖 (C51C)", "日本鹽 (C51A)", "味鹽 (C51)", "S&B七味粉（支） (C56)", "木魚精 (C41A)", "瀬戶風味泡飯素 (C67B)", "味椒鹽 (C51B)", "味付椒鹽 (C51BB)", "S&B咖喱磚 甘口 (C39)", "S&B咖喱磚 辛口 (C39A)", "S&B咖喱磚 中辛 (C39B)", "高吸收熟成膜 (C92)", "片粟粉 (C43B)", "黑松露醬 (C49)", "芋絲 (C62A)", "迷迭香 (C01E)", "西京白味噌 (C53A)", "一休味噌 (C53B)", "白芝麻 (C65)", "信洲白味噌 (C53)", "花丸木味噌 (C53D)", "麥粒味噌 (C53G)", "合成醋（麥近） (C22A)"] },
+        { cat: "麵/烏冬/米/茶", items: ["急凍真打稻庭烏冬 (D82)", "急凍拉麵 (D82A)", "日式乾拉麵120g (C52E)", "凍蕎麥面 (D82E)", "乾葛絲 (C62)", "五木赤面（日本） (C52B)", "日本新潟米 (C69D)", "桶裝醋開關蓋 (C07G)", "飯網 (C17)", "炊飯素 (C67C)", "大麥茶包 (C61B)", "玄米茶（日本） (C61A)"] },
+        { cat: "漬物", items: ["紅薑 (C27)", "白薑 (C27A)", "牛蒡醬油漬 (C31B)", "薑芽(30本) (C27B)", "紅酒蕎頭漬 (C31EA)", "海葡萄100g (D81A)", "青雞冠草 (C09)", "泡菜（400g） (C87B)", "新漬黃蘿白 (C31)", "味噌蒜頭漬 (C31C)", "紅雞冠草 (C09A)", "味付筍 (C31D)", "青海草 (C10AA)"] },
+        { cat: "伴碟/乾貨/工具", items: ["軍艦紫菜50片 (C18A)", "壽司紫菜50片 (C18C)", "紫菜絲 (C18E)", "單翼手捲海苔 (C18F)", "中國日出昆布(1K) (C57)", "碎海草 (C10A)", "紫菜粉 (C18G)", "紫菜杯 (C18J)", "日本日高昆布（100g） (C57A)", "山形膠葉 (C01B)", "櫻花蝦乾500g (C03)", "櫻花蝦乾90g (C03A)", "醫用丁晴手套 S (C50BA)", "醫用丁晴手套 M (C50BB)", "醫用丁晴手套 L (C50BC)", "保鮮綿紙M (C70)", "914保鮮紙 (C914SC)", "912保鮮紙 (C912SC)", "910保鮮紙 (C910SC)", "613錫紙 (C613)", "3寸木皮船 (C04C)", "手套S (C50AA)", "手套M (C50AB)", "天婦羅紙 (C43A)", "大木盒 (C07)", "細木盒 (C07A)", "日本JFDA消毒酒精 (C50D)"] }
+    ];
+    
+    let productMap = {}, cart = {}, cartUnits = {}, cartModal = null, unitModal = null, branchModal = null, pendingProductCode = null, setupModal = null;
+    
+    function init() {
+            cartModal = new bootstrap.Modal(document.getElementById('cartModal'));
+            unitModal = new bootstrap.Modal(document.getElementById('unitSelectionModal'));
+            setupModal = new bootstrap.Modal(document.getElementById('setupModal'));
+            branchModal = new bootstrap.Modal(document.getElementById('branchModal'));
+            noteModal = new bootstrap.Modal(document.getElementById('noteModal'));
+            // 🔥 初始化部門 Modal
+            deptModal = new bootstrap.Modal(document.getElementById('deptCheckModal'));
+
+            productMap = {};
+            if (typeof fullCatalog !== 'undefined') {
+                fullCatalog.forEach(cat => {
+                    cat.items.forEach(s => {
+                        let n = s, c = 'UNKNOWN';
+                        const m = s.match(/^(.*)\s*\(([A-Za-z0-9]+)\)$/);
+                        if(m){ n = m[1]; c = m[2]; } else { c = s.replace(/[^a-zA-Z0-9]/g,''); }
+                        
+                        productMap[c] = {
+                            name: n,
+                            code: c,
+                            cat: cat.cat,
+                            fullName: s,
+                            oos: outOfStockCodes.includes(c)
+                        };
+                    });
+                });
+            }
+
+            productMap['C35B'] = {
+                name: "魚勝魚幹",
+                code: "C35B",
+                cat: "軍艦和日式小食",
+                fullName: "魚勝魚幹(C35B)",
+                oos: false
+            };
+        // 🔥 新增：隱藏版專屬產品 (不會出現在全部產品列表中)
+            productMap['C25H'] = {
+                name: "神戶冷麵汁",
+                code: "C25H",
+                cat: "調味料", 
+                fullName: "神戶冷麵汁 (C25H)",
+                oos: false
+            };
+            
+            productMap['D26D'] = {
+                name: "銀鱈魚4-5磅",
+                code: "D26D",
+                cat: "急凍海產類--2", 
+                fullName: "銀鱈魚4-5磅 (D26D)",
+                oos: false
+            };
+
+           productMap['D47C'] = {
+                name: "北寄貝片L",
+                code: "D47C",
+                cat: "刺身壽司用料（帶子及貝殼類）", 
+                fullName: "北寄貝片L (D47C)",
+                oos: false
+            };        
+        
+
+            identifyUser();
+    }
+    
+    function identifyUser() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const clientID = urlParams.get('id');
+        const logoutBtn = document.querySelector('.btn-logout');
+        
+        if (clientID && typeof clientGroups !== 'undefined' && clientGroups[clientID]) {
+            const group = clientGroups[clientID];
+            const listDiv = document.getElementById('branchList');
+            listDiv.innerHTML = ''; 
+
+            group.branches.forEach(branchID => {
+                let branchName = branchID;
+                let bClient = clientDB[branchID];
+                if (!bClient) {
+                      if (clientDB[branchID + "#A"]) bClient = clientDB[branchID + "#A"];
+                      else if (clientDB[branchID + "#P"]) bClient = clientDB[branchID + "#P"];
+                      else if (clientDB[branchID + "#C"]) bClient = clientDB[branchID + "#C"];
+                }
+                if (bClient) branchName = bClient.name;
+
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-outline-dark w-100 text-center py-3 fw-bold';
+                btn.innerHTML = `<i class="bi bi-shop me-2"></i> ${branchName}`; 
+                btn.onclick = function() { selectBranch(branchID); };
+                listDiv.appendChild(btn);
+            });
+
+            branchModal.show();
+            return; 
+        }
+
+        loadClientData(clientID);
+    }
+
+    function selectBranch(branchID) {
+        branchModal.hide();
+        loadClientData(branchID);
+    }
+
+    function loadClientData(clientID) {
+        const logoutBtn = document.querySelector('.btn-logout');
+        const deptBadge = document.getElementById('deptBadge');
+        
+        // 重置多部門狀態
+        isMultiDept = false;
+        currentDeptId = null;
+        deptCarts = {};
+        deptBadge.style.display = 'none';
+
+        if (clientID && typeof clientDB !== 'undefined') {
+            
+            let client = clientDB[clientID];
+            let foundID = clientID; 
+
+            if (!client) {
+                if (clientDB[clientID + "#A"]) { client = clientDB[clientID + "#A"]; foundID = clientID + "#A"; }
+                else if (clientDB[clientID + "#P"]) { client = clientDB[clientID + "#P"]; foundID = clientID + "#P"; }
+                else if (clientDB[clientID + "#C"]) { client = clientDB[clientID + "#C"]; foundID = clientID + "#C"; }
+            }
+
+            if (!client && clientID.includes('#')) {
+                let baseID = clientID.split('#')[0]; 
+                
+                if (clientDB[baseID + "#P"]) { client = clientDB[baseID + "#P"]; foundID = baseID + "#P"; }
+                else if (clientDB[baseID + "#A"]) { client = clientDB[baseID + "#A"]; foundID = baseID + "#A"; }
+                else if (clientDB[baseID + "#C"]) { client = clientDB[baseID + "#C"]; foundID = baseID + "#C"; }
+            }
+
+            if (!client && clientID.includes('#')) {
+                let parts = clientID.split('#');
+                let base = parts[0];    
+                let suffix = parts[1]; 
+                
+                let cleanBase = base.replace(/[A-Z]$/, ''); 
+                let tryID = cleanBase + "#" + suffix; 
+                
+                if (clientDB[tryID]) {
+                    client = clientDB[tryID];
+                    foundID = tryID; 
+                }
+            }
+
+            if (client) {
+                customerName = client.name;
+                if (client.box_items) currentClientBoxItems = client.box_items;
+                else currentClientBoxItems = [];
+
+                customerCode = foundID; 
+                salesID = client.sales || "A"; 
+                presetFrequent = client.list || []; 
+                
+                document.getElementById('displayClientName').innerHTML = customerName;
+                document.getElementById('displayClientCode').innerText = customerCode;
+                
+                const topInfoDiv = document.querySelector('.top-info > div:first-child');
+                if (topInfoDiv) topInfoDiv.onclick = null;
+                
+                if (logoutBtn) logoutBtn.style.display = 'none';
+
+                // 🔥🔥 檢查是否為多部門客戶 🔥🔥
+                if (multiDeptRules[foundID]) {
+                    isMultiDept = true;
+                    const config = multiDeptRules[foundID];
+                    
+                    // 初始化部門購物車
+                    config.depts.forEach(d => {
+                        deptCarts[d.id] = { cart: {}, units: {} };
+                    });
+
+                    // 預設選第一個部門
+                    const defaultDept = config.depts[0];
+                    currentDeptId = defaultDept.id;
+                    presetFrequent = defaultDept.list || []; // 設定該部門的常用清單
+
+                    // UI 顯示
+                    deptBadge.style.display = 'inline-block';
+                    deptBadge.innerText = `🔵 ${defaultDept.name}`;
+                }
+                
+            } else { 
+                initNewClientMode();
+            }
+        } else {
+             initNewClientMode();
+        }
+        
+        finalizeInit(); 
+    }
+
+    function initNewClientMode() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const logoutBtn = document.querySelector('.btn-logout');
+        salesID = urlParams.get('sales') || "A";
+        profileKey = "gen_profile_" + salesID; 
+        customerName = localStorage.getItem(profileKey + "_name") || "";
+        customerCode = localStorage.getItem(profileKey + "_code") || "";
+        updateClientInfoUI(); 
+        if(logoutBtn) logoutBtn.style.display = 'inline-block';
+    }
+
+    function finalizeInit() {
+        if (typeof salesTeam !== 'undefined' && salesTeam[salesID]) {
+            currentSalesPhone = salesTeam[salesID].phone;
+            document.getElementById('displayPhone').innerText = currentSalesPhone;
+        } else {
+            currentSalesPhone = "63771688";
+            document.getElementById('displayPhone').innerText = currentSalesPhone;
+        }
+        
+        const clientID_Final = customerCode || "gen_user_" + salesID;
+        storageKey = "client_user_" + clientID_Final;
+        
+        // 1. 先讀取舊數據
+        const savedStats = localStorage.getItem(storageKey + '_stats');
+        if(savedStats) { try { itemCounts = JSON.parse(savedStats); } catch(e) {} }
+        
+        // 🔥🔥🔥 開始：Magic Link 接收邏輯 (必須有這段) 🔥🔥🔥
+        const urlParams = new URLSearchParams(window.location.search);
+        const addCodeRaw = urlParams.get('add'); 
+        
+        if (addCodeRaw) {
+            const codesToAdd = addCodeRaw.split(','); 
+            let addedNames = [];
+            
+            codesToAdd.forEach(c => {
+                c = c.trim();
+                if (productMap[c]) {
+                    // 強制加權重：設為 20 次確保排第一
+                    if (itemCounts[c]) itemCounts[c] += 10;
+                    else itemCounts[c] = 20; 
+                    addedNames.push(productMap[c].name);
+                }
+            });
+
+            if (addedNames.length > 0) {
+                localStorage.setItem(storageKey + '_stats', JSON.stringify(itemCounts));
+                // 延遲一下顯示 Alert，體驗比較好
+                setTimeout(() => {
+                    alert(`✅ 成功添加常用產品：\n\n${addedNames.join('\n')}\n\n以後在「常用清單」就能直接看到了！`);
+                }, 500);
+            }
+            
+            // (可選) 清理網址，避免刷新重複觸發，但保留 ID
+            const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + "?id=" + clientID_Final;
+            window.history.replaceState({}, document.title, cleanUrl);
+        }
+        // 🔥🔥🔥 結束：Magic Link 接收邏輯 🔥🔥🔥
+
+        learnedFrequent = Object.keys(itemCounts);
+        // 🚑 遠程修復：針對 馬鞍山 (W3877B) 的自動糾錯
+        // 原理：只有當名字【完全等於】"馬鞍山" (去除前後空格) 且編號丟失時，才強制覆蓋
+        // 這樣就不會誤傷 "馬鞍山壽司店" 或 "XX餐廳(馬鞍山)" 這種客戶
+        if (customerName && customerName.trim() === "馬鞍山" && (!customerCode || customerCode.length < 2)) {
+            customerName = "禪(馬鞍山)";
+            customerCode = "W3877B";
+            
+            // 順便幫他把正確的資料寫入手機緩存，徹底修復
+            if(profileKey) {
+                localStorage.setItem(profileKey + "_name", customerName);
+                localStorage.setItem(profileKey + "_code", customerCode);
+            }
+            updateClientInfoUI(); // 立即刷新介面上的名字顯示
+        }
+        let needSwap = false;
+        if (presetFrequent.includes('C35B')) needSwap = true;
+        if (learnedFrequent.includes('C35B')) needSwap = true;
+
+        if (needSwap) {
+            fullCatalog.forEach(cat => {
+                for(let i=0; i<cat.items.length; i++) {
+                    if (cat.items[i].includes('C35A')) cat.items[i] = "魚勝魚幹 (C35B)";
+                }
+            });
+            if (productMap['C35A']) delete productMap['C35A'];
+        }
+
+        presetFrequent.forEach(code => {
+            if (code.endsWith('_BOX')) {
+                let baseCode = code.replace('_BOX', '');
+                let baseProduct = productMap[baseCode];
+                
+                if (baseProduct) {
+                    productMap[code] = {
+                        name: baseProduct.name, 
+                        code: code,
+                        cat: baseProduct.cat,
+                        fullName: baseProduct.name + " (" + code + ")", 
+                        oos: baseProduct.oos,
+                        isVirtualBox: true 
+                    };
+                }
+            }
+        });
+
+        const urlID = new URLSearchParams(window.location.search).get('id');
+        if (typeof clientGroups !== 'undefined' && clientGroups[urlID]) {
+            document.getElementById('switchBranchBtn').style.display = 'inline-block';
+        }
+
+        // 🔥 如果是多部門，載入多部門的存檔
+        if (isMultiDept) {
+            const savedDeptCarts = localStorage.getItem('deptCarts_' + storageKey);
+            if (savedDeptCarts) {
+                try { deptCarts = JSON.parse(savedDeptCarts); } catch(e) {}
+            }
+            // 載入當前部門的購物車到全局 cart
+            cart = deptCarts[currentDeptId].cart || {};
+            cartUnits = deptCarts[currentDeptId].units || {};
+        } else {
+            loadCart(); 
+        }
+
+        renderFrequent(); 
+        renderAll(); 
+        calcTotal();
+
+        if(presetFrequent.length === 0 && (!customerName || !customerCode)){
+            openSetupModal(false);
+        }
+    }
+    
+    // 🔥 切換部門邏輯
+    function switchDepartment(targetDeptId) {
+        if (!isMultiDept || targetDeptId === currentDeptId) {
+            deptModal.hide();
+            return;
+        }
+
+        // 1. 保存當前部門的購物車
+        deptCarts[currentDeptId].cart = JSON.parse(JSON.stringify(cart));
+        deptCarts[currentDeptId].units = JSON.parse(JSON.stringify(cartUnits));
+        
+        // 2. 切換部門 ID
+        currentDeptId = targetDeptId;
+        const config = multiDeptRules[customerCode];
+        const targetDept = config.depts.find(d => d.id === targetDeptId);
+
+        // 3. 載入新部門的購物車 (如果有的話)
+        cart = deptCarts[currentDeptId].cart || {};
+        cartUnits = deptCarts[currentDeptId].units || {};
+
+        // 4. 更新常用清單
+        presetFrequent = targetDept.list || [];
+
+        // 5. 更新 UI
+        document.getElementById('deptBadge').innerText = `🔵 ${targetDept.name}`;
+        
+        // 保存狀態
+        localStorage.setItem('deptCarts_' + storageKey, JSON.stringify(deptCarts));
+
+        // 重繪
+        renderFrequent();
+        renderAll(); // 重置全部產品列表
+        calcTotal();
+        
+        // 關閉 Modal 並回到頂部
+        deptModal.hide();
+        window.scrollTo(0,0);
+        
+        // 切換到常用清單頁
+        switchTab('frequent');
+    }
+
+    // 🔥 顯示部門切換確認 Modal (按鈕加大版)
+    function showDeptCheckModal(mode) {
+        if (!isMultiDept) return;
+        
+        const config = multiDeptRules[customerCode];
+        const currentName = config.depts.find(d => d.id === currentDeptId).name;
+        document.getElementById('currentDeptName').innerText = currentName;
+
+        const container = document.getElementById('deptButtonsContainer');
+        container.innerHTML = '';
+
+        config.depts.forEach(d => {
+            if (d.id !== currentDeptId) {
+                const btn = document.createElement('button');
+                // 修改：使用 btn-outline-dark，並加上 btn-lg (大按鈕), fs-5 (大字體), py-3 (高一點)
+                btn.className = 'btn btn-outline-dark btn-lg fw-bold fs-5 py-3'; 
+                btn.innerHTML = `切換到 <b>${d.name}</b>`;
+                btn.onclick = function() { switchDepartment(d.id); };
+                container.appendChild(btn);
+            }
+        });
+
+        deptModal.show();
+    }
+
+    function openSetupModal(allowClose = true) {
+        document.getElementById('inputClientName').value = customerName;
+        document.getElementById('inputClientCode').value = customerCode;
+        const closeBtn = document.getElementById('setupCloseBtn');
+        closeBtn.style.display = allowClose ? 'block' : 'none';
+        setupModal.show();
+    }
+
+    function saveClientDetails() {
+        const name = document.getElementById('inputClientName').value.trim();
+        const code = document.getElementById('inputClientCode').value.trim();
+        if(!name || !code) { alert("請輸入完整的名稱和編號！"); return; }
+        
+        customerName = name;
+        customerCode = code;
+        localStorage.setItem(profileKey + "_name", customerName);
+        localStorage.setItem(profileKey + "_code", customerCode);
+        
+        updateClientInfoUI();
+        setupModal.hide();
+    }
+
+    function updateClientInfoUI() {
+        if(customerName) document.getElementById('displayClientName').innerHTML = customerName + ' <i class="bi bi-pencil-square" style="font-size:0.8em"></i>';
+        if(customerCode) document.getElementById('displayClientCode').innerText = customerCode;
+    }
+
+    function logoutUser() {
+        if(confirm("確定要登出並清除此裝置上的客戶資料嗎？\n(常用清單和購物車也會被清空)")) {
+            if(profileKey) {
+                localStorage.removeItem(profileKey + "_name");
+                localStorage.removeItem(profileKey + "_code");
+            }
+            localStorage.removeItem(storageKey + '_stats');
+            localStorage.removeItem('orderCart_'+storageKey);
+            localStorage.removeItem('orderUnits_'+storageKey);
+            localStorage.removeItem('deptCarts_'+storageKey); // 清除多部門緩存
+            location.reload(); 
+        }
+    }
+    
+    function getDeliveryDate() {
+        const now = new Date();
+        const hour = now.getHours();
+        let targetDate = new Date(now);
+
+        // 1. 執行原本的計算邏輯 (11點後算明天送 / 週末處理)
+        if (hour >= 11) targetDate.setDate(targetDate.getDate() + 1);
+        if (targetDate.getDay() === 0) targetDate.setDate(targetDate.getDate() + 1); // 週日順延
+
+        const y = targetDate.getFullYear();
+        const m = String(targetDate.getMonth() + 1).padStart(2, '0');
+        const d = String(targetDate.getDate()).padStart(2, '0');
+        const w = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"][targetDate.getDay()];
+        return `${y}-${m}-${d} (${w})`;
+    }
+
+    function loadCart() {
+        const c=localStorage.getItem('orderCart_'+storageKey), u=localStorage.getItem('orderUnits_'+storageKey);
+        if(c)try{cart=JSON.parse(c)}catch(e){} if(u)try{cartUnits=JSON.parse(u)}catch(e){}
+        calcTotal();
+    }
+    function saveCart() {
+        if (isMultiDept) {
+            // 實時保存當前部門到大物件
+            deptCarts[currentDeptId].cart = cart;
+            deptCarts[currentDeptId].units = cartUnits;
+            localStorage.setItem('deptCarts_' + storageKey, JSON.stringify(deptCarts));
+        } else {
+            localStorage.setItem('orderCart_'+storageKey, JSON.stringify(cart));
+            localStorage.setItem('orderUnits_'+storageKey, JSON.stringify(cartUnits));
+        }
+    }
+
+    // === 🔥 搜尋與 Tab 切換邏輯 (全域搜尋版) ===
+
+    function switchTab(t) {
+        // 1. 【核心】強制顯示搜尋欄 (永遠不准消失)
+        const searchBar = document.getElementById('searchBar');
+        if (searchBar) {
+            searchBar.style.display = 'block'; 
+        }
+
+        // 2. 清空搜尋框 & 隱藏 X 按鈕
+        const searchInput = document.getElementById('searchInput');
+        const clearBtn = document.getElementById('clearSearchBtn');
+        if (searchInput) searchInput.value = ''; 
+        if (clearBtn) clearBtn.style.display = 'none';
+
+        // 3. 【暴力重置】先隱藏所有分頁內容
+        const tabs = document.querySelectorAll('.tab-content');
+        tabs.forEach(e => {
+            e.style.display = 'none';
+            e.classList.remove('active');
+        });
+
+        const navLinks = document.querySelectorAll('.nav-link');
+        navLinks.forEach(e => e.classList.remove('active'));
+
+        // 4. 顯示目標分頁
+        const targetTab = document.getElementById('tab-' + t);
+        if (targetTab) {
+            targetTab.style.display = 'block'; // 強制顯示
+            targetTab.classList.add('active');
+        }
+
+        // 5. 亮起對應的按鈕
+        let targetBtn;
+        if (t === 'frequent') {
+            targetBtn = document.querySelector('button[onclick*="frequent"]');
+            if (typeof renderFrequent === 'function') renderFrequent(); 
+        } else {
+            targetBtn = document.querySelector('button[onclick*="all"]');
+            if (typeof renderAll === 'function') renderAll(''); 
+        }
+        
+        if (targetBtn) targetBtn.classList.add('active');
+
+        // 6. 滾 মাস্টার動回頁面頂部
+        window.scrollTo(0, 0);
+    }
+
+    function filterAllProducts() {
+        const input = document.getElementById('searchInput');
+        const v = input.value.trim().toUpperCase();
+        const clearBtn = document.getElementById('clearSearchBtn');
+        const freqContent = document.getElementById('tab-frequent');
+        const allContent = document.getElementById('tab-all');
+        const btns = document.querySelectorAll('.nav-link');
+
+        clearBtn.style.display = v.length ? 'block' : 'none';
+
+        if (v.length === 0) {
+            if (btns[0].classList.contains('active')) {
+                freqContent.style.display = 'block';
+                allContent.style.display = 'none';
+                renderFrequent(); 
+            } else {
+                freqContent.style.display = 'none';
+                allContent.style.display = 'block';
+                renderAll(''); 
+            }
+            return;
+        }
+
+        freqContent.style.display = 'none';
+        allContent.style.display = 'block';
+        allContent.classList.add('active'); 
+
+        let html = '';
+        
+        fullCatalog.forEach(cat => {
+            const items = cat.items.filter(i => {
+                let n = i, c = 'UNKNOWN';
+                const m = i.match(/^(.*)\s*\(([A-Za-z0-9_]+)\)$/);
+                if(m){ n = m[1]; c = m[2]; } else { c = i.replace(/[^a-zA-Z0-9_]/g,''); }
+                
+                const codeUpper = c.toUpperCase();
+                const nameUpper = n.toUpperCase();
+                let displayCode = c.endsWith('_BOX') ? c.replace('_BOX', '') : c;
+                
+                const matchCode = displayCode.includes(v) || c.includes(v);
+                const matchName = nameUpper.includes(v);
+
+                return matchCode || matchName;
+            });
+
+            if (items.length > 0) {
+                html += `<div class="cat-header">${cat.cat}</div>`;
+                items.forEach(i => html += createProductRow(i));
+            }
+        });
+
+        if (html === '') {
+            html = '<div class="text-center p-5 text-muted">找不到相關產品</div>';
+        }
+        
+        allContent.innerHTML = html;
+    }
+
+    function clearSearch() {
+        const input = document.getElementById('searchInput');
+        input.value = '';
+        document.getElementById('clearSearchBtn').style.display = 'none';
+        filterAllProducts();
+        input.blur();
+    }
+
+    function renderAll(filter = '') {
+        const c = document.getElementById('tab-all');
+        let h = '';
+        
+        if (filter) {
+            filterAllProducts(); 
+            return;
+        }
+
+        fullCatalog.forEach(cat => {
+            h += `<div class="cat-header">${cat.cat}</div>`;
+            cat.items.forEach(i => h += createProductRow(i));
+        });
+        
+        c.innerHTML = h;
+    }
+    
+    function renderFrequent(){
+        const c=document.getElementById('frequentListContent');
+        const emptyMsg = document.getElementById('emptyFrequentMsg');
+        const resetBtn = document.getElementById('btnResetFreq');
+        let h='';
+        
+        if (presetFrequent.length > 0) {
+            presetFrequent.forEach(code => {
+                const p = productMap[code];
+                if(p) h += createProductRow(p.fullName);
+            });
+
+            let sortedKeys = Object.keys(itemCounts).sort((a,b) => {
+                let diff = itemCounts[b] - itemCounts[a];
+                return diff !== 0 ? diff : a.localeCompare(b);
+            });
+            
+            let newAddedItems = sortedKeys.filter(code => !presetFrequent.includes(code));
+
+            if (newAddedItems.length > 0) {
+                h += `<div class="freq-divider">👇 最近新增產品 👇</div>`;
+                newAddedItems.forEach(code => {
+                    const p = productMap[code];
+                    if(p) h += createProductRow(p.fullName);
+                });
+                resetBtn.innerHTML = '<i class="bi bi-trash"></i> 清除最近新增';
+                resetBtn.style.display = 'inline-block';
+            } else {
+                resetBtn.style.display = 'none';
+            }
+            
+            emptyMsg.style.display = 'none';
+            c.innerHTML = h;
+
+        } else {
+            let sortedKeys = Object.keys(itemCounts).sort((a,b) => {
+                let diff = itemCounts[b] - itemCounts[a];
+                return diff !== 0 ? diff : a.localeCompare(b);
+            });
+
+            if (sortedKeys.length > 0) {
+                sortedKeys.forEach(code=>{
+                    const p=productMap[code];
+                    if(p) h+=createProductRow(p.fullName);
+                });
+                emptyMsg.style.display = 'none';
+                resetBtn.style.display = 'inline-block'; 
+                resetBtn.innerHTML = '<i class="bi bi-arrow-counterclockwise"></i> 重置常用清單';
+                c.innerHTML = h;
+            } else {
+                emptyMsg.style.display = 'block';
+                resetBtn.style.display = 'none'; 
+                c.innerHTML = '';
+            }
+        }
+    }
+
+    function resetFrequentList() {
+        const isOldClient = presetFrequent.length > 0;
+        const msg = isOldClient 
+            ? "確定要清除「最近新增」的產品記錄嗎？\n(原本的固定清單不會受影響)" 
+            : "確定要重置常用清單嗎？\n這將清空所有自動記憶的產品。";
+
+        if(confirm(msg)) {
+            itemCounts = {};
+            learnedFrequent = [];
+            localStorage.removeItem(storageKey + '_stats');
+            renderFrequent();
+        }
+    }
+    
+    function createProductRow(s){
+        let n=s,c='UNKNOWN';
+        const m=s.match(/^(.*)\s*\(([A-Za-z0-9_]+)\)$/); 
+        if(m){n=m[1];c=m[2]}else{c=s.replace(/[^a-zA-Z0-9_]/g,'')}
+
+        let displayCode = c.endsWith('_BOX') ? c.replace('_BOX', '') : c;
+
+        // 🔥 讀取常規價格 (使用 {...} 複製一份，保護原始資料不被改壞)
+        let info = typeof productInfo !== 'undefined' && productInfo[c] ? { ...productInfo[c] } : { price: "", boxSpec: "" };
+        
+        // 🔥 專屬定價攔截：如果客戶有特殊報價，直接覆蓋常規價格！
+        if (typeof specialPricing !== 'undefined') {
+            let specialPrice = null;
+            
+            // 優先檢查：是否有「精準客戶編號」專屬價
+            if (specialPricing.exact && specialPricing.exact[customerCode] && specialPricing.exact[customerCode][c]) {
+                specialPrice = specialPricing.exact[customerCode][c];
+            } 
+            // 其次檢查：是否有「客戶編號開頭 (集團)」專屬價
+            else if (specialPricing.prefix) {
+                for (let p in specialPricing.prefix) {
+                    if (customerCode.startsWith(p) && specialPricing.prefix[p][c]) {
+                        specialPrice = specialPricing.prefix[p][c];
+                        break; 
+                    }
+                }
+            }
+
+            // 🔥 智慧拼接單位大腦
+            if (specialPrice) {
+                let unitIndex = info.price.indexOf('/'); // 找尋原本價格裡的 '/' 符號
+                let originalUnit = unitIndex !== -1 ? info.price.substring(unitIndex) : ''; 
+                
+                if (!specialPrice.includes('/')) {
+                    info.price = specialPrice + originalUnit; 
+                } else {
+                    info.price = specialPrice; 
+                }
+            }
+        }
+
+       // ==========================================
+        // 🔥 新增：自動漲價大腦 (毛利除算法，向上取整)
+        // ==========================================
+        if (typeof clientMarkupRules !== 'undefined') {
+            let divisor = 1; // 預設除數為 1 (代表不變)
+            // 1. 檢查精準匹配
+            if (clientMarkupRules.exact && clientMarkupRules.exact[customerCode]) {
+                divisor = clientMarkupRules.exact[customerCode];
+            } 
+            // 2. 檢查字首匹配
+            else if (clientMarkupRules.prefix) {
+                for (let p in clientMarkupRules.prefix) {
+                    if (customerCode.startsWith(p)) {
+                        divisor = clientMarkupRules.prefix[p];
+                        break;
+                    }
+                }
+            }
+
+            // 3. 執行除法與向上取整 (Math.ceil)
+            if (divisor !== 1 && info.price) {
+                info.price = info.price.replace(/(\d+(\.\d+)?)/, function(match) {
+                    let num = parseFloat(match);
+                    // 💡 關鍵修改：將乘法改為除法 (例如 100 / 0.95)
+                    return Math.ceil(num / divisor); 
+                });
+            }
+        }
+
+        let boxSpecHTML = info.boxSpec ? ` <span style="color:#adb5bd; margin:0 4px;">|</span> <span style="color:#6c757d; font-weight:bold;">${info.boxSpec}</span>` : "";
+        
+// 🔥 終極價格顯示邏輯：全開模式 (所有客戶皆可直接看見價格)
+        let priceHTML = info.price ? `<div class="price-tag">${info.price}</div>` : "";
+        let oosPriceHTML = info.price ? `<div class="price-tag" style="color:#aaa;">${info.price}</div>` : "";
+
+       // 🔥 標籤按鈕邏輯 (升級版：加入防拆散換行設定)
+        if (typeof isNativeBox === 'function' && isNativeBox(c)) {
+            let baseC = c.replace('_BOX', '');
+            if (typeof globalBoxItems !== 'undefined' && (globalBoxItems.includes(c) || globalBoxItems.includes(baseC))) {
+                n += ` <span style="background-color:#ffc107; color:#000; padding:2px 6px; border-radius:4px; font-size:0.9rem; font-weight:bold; margin-left:8px; vertical-align: text-bottom; user-select:none; white-space:nowrap; display:inline-block; margin-top:2px;">📦 原箱</span>`;
+            } else {
+                let isPiece = (cartUnits[c] === 'temp_piece');
+                let bg = isPiece ? '#d1e7dd' : '#ffc107';
+                let col = isPiece ? '#0f5132' : '#000';
+                let txt = isPiece ? '🏷️ 單件 🔄' : '📦 原箱 🔄';
+                n += ` <span id="badge-${c}" onclick="toggleNativeBox('${c}')" style="background-color:${bg}; color:${col}; padding:2px 6px; border-radius:4px; font-size:0.9rem; font-weight:bold; margin-left:8px; vertical-align: text-bottom; cursor:pointer; user-select:none; white-space:nowrap; display:inline-block; margin-top:2px;">${txt}</span>`;
+            }
+        }
+        // 🔥 如果缺貨，印出帶有灰色價格和箱規的版面
+        if (isProductOOS(c)) return `<div class="product-row oos" id="row-${c}"><div class="p-info"><div class="p-name">${n} <span class="oos-badge">🚫 缺貨</span></div><div class="p-code">${displayCode}${boxSpecHTML}</div></div>${oosPriceHTML}<div class="qty-control disabled"><div class="qty-btn disabled">-</div><input type="text" class="qty-input" value="0" readonly disabled><div class="qty-btn disabled">+</div></div></div>`;
+        
+        const q=cart[c]||0; let u=cartUnits[c];
+        
+        // 🔥 修復：如果它是「強制原箱」或「客戶專屬原箱」，且沒有被切換成單件，就默認給它顯示「箱」
+        let baseC = c.replace('_BOX', '');
+        let isGlobalBox = typeof globalBoxItems !== 'undefined' && (globalBoxItems.includes(c) || globalBoxItems.includes(baseC));
+        if ((isGlobalBox || (typeof isNativeBox === 'function' && isNativeBox(c))) && u !== 'temp_piece') {
+            u = 'temp_box'; 
+        }
+
+        let val=q, cls='qty-input'; 
+        if (q > 0) {
+            if (u === 'kg') { 
+                val += ' K'; cls += ' unit-kg'; 
+            // 🔥 關鍵修復：這裡加入 box 和 box3，讓購物車也能完美認得彈窗選的箱子！
+            } else if (u === 'temp_box' || u === 'box' || u === 'box3') { 
+                val += ' 箱'; cls += ' unit-box'; 
+            } else if (u === 'temp_pack') { 
+                val += ' 排'; cls += ' unit-box'; 
+            } else {
+                // 🔥 如果是單件 (piece 或 temp_piece)，就去查字典顯示「條/隻/包」
+                if (typeof weightedUnitMap !== 'undefined' && weightedUnitMap[c]) {
+                    val += ' ' + weightedUnitMap[c];
+                }
+            }
+        }
+        const sel = q > 0 ? 'selected' : '';
+        
+        // 🔥 修復：讓 10 倍數和鰻魚產品也能支援長按切換「箱」
+        let inputHTML = '';
+        if (eelProducts.includes(c) || stepTenCodes.includes(c)) {
+            // 加上 onpointerdown 等長按事件，並保留 readonly 防止亂打字
+            inputHTML = `<input type="text" class="${cls}" id="qty-${c}" value="${val}" readonly onpointerdown="startBoxPress('${c}')" onpointerup="cancelBoxPress()" onpointerleave="cancelBoxPress()" onpointercancel="cancelBoxPress()">`;
+        } else {
+            inputHTML = `<input type="text" class="${cls}" id="qty-${c}" value="${val}" onclick="this.select()" onchange="manualQtyChange('${c}', this.value)" inputmode="decimal" onpointerdown="startBoxPress('${c}')" onpointerup="cancelBoxPress()" onpointerleave="cancelBoxPress()" onpointercancel="cancelBoxPress()">`;
+        }
+
+        // 🔥 正常渲染版面：加入 priceHTML 和 boxSpecHTML
+        return `<div class="product-row ${sel}" id="row-${c}"><div class="p-info"><div class="p-name">${n}</div><div class="p-code">${displayCode}${boxSpecHTML}</div></div>${priceHTML}<div class="qty-control"><div class="qty-btn" onclick="updateQty('${c}',-1)">-</div>${inputHTML}<div class="qty-btn" onclick="updateQty('${c}',1)">+</div></div></div>`
+    }
+    
+    // ==========================================
+    // 🔥 智慧防呆轉換器：客戶專屬「點錯自動糾正」名單 (Excel 最新修改版)
+// ==========================================
+const autoConvertRules = {
+    "104": { "D09HC": "D09", "D19ER": "D19E" }, // 永記(碼頭): 熟帆立貝M(D09HC->D09), 三文魚籽(D19ER->D19E)
+    "121": { "C25": "C25G" }, // 超牛: 神鰻魚汁(C25->C25G)
+    "382B": { "D07A": "D07", "D22E": "D22FA" }, // 大盛(官): 馬刀10g(D07A->D07), 條鰻魚(D22E->D22FA)
+    "627": { "D12A": "D12" }, // 花串(中環): 軟蚧細(D12A->D12)
+    "644": { "D46AA": "D46A" }, // 極品(深): 蟹柳20條(D46AA->D46A)
+    "645ZM": { "D22FB": "D22FA" }, // 禮佳(元朗): 鰻片10g(D22FB->D22FA)
+    "661CH": { "D74C": "D74A" }, // 魚兵(官): 滋味鮑魚(D74C->D74A)
+    "661D": { "C60": "C43" }, // 康山熟食: 炸雞粉(C60->C43)
+    "669": { "E08": "E08AA" }, // 壽司仔(大埔): 餃子(E08->E08AA)
+    "778": { "D19ER": "D19E" }, // 家賀(灣仔): 三文魚籽(D19ER->D19E)
+    "862C": { "D18": "D18A", "D21": "D21A" }, // 漁匡火鍋(屯): 大劍腩(碼)(D18->D18A), 大蚧籽(D21->D21A)
+    "862E": { "C25A": "C44A", "D18": "D18A", "D21": "D21A", "D58": "D58B" }, // 漁匡(屯): 神燒肉汁(C25A->C44A), 大劍腩(碼)(D18->D18A), 大蚧籽(D21->D21A), 左口邊20片(D58->D58B)
+    "862F": { "C25A": "C44A", "D64B": "D64BA" }, // 漁匡(元): 神燒肉汁(C25A->C44A), 吉蠔平(D64B->D64BA)
+    "896A": { "C27D": "C31C" }, // 和氣(黃): 蒜蓉(C27D->C31C)
+    "976": { "D51B": "D51" }, // 旭川(西): 獨立希0魚(D51B->D51)
+    "977": { "D19ER": "D19E", "D88FD": "D88AB" }, // 喜多郎(西貢): 三文魚籽(D19ER->D19E), 碟雞皮串(D88FD->D88AB)
+    "991H": { "C20BA": "C26C" }, // 日の苑(佐敦): 柚子醋(C20BA->C26C)
+    "A1051": { "D19ER": "D19E" }, // 隨意(灣仔): 三文魚籽(D19ER->D19E)
+    "A1075C": { "D74A": "D74C" }, // 御品(元): 磯鮑(D74A->D74C)
+    "A1075F": { "D74A": "D74C" }, // 御品(長): 磯鮑(D74A->D74C)
+    "A1075G": { "D10JAA": "D10JA", "D74A": "D74C" }, // 御品(官塘): 赤蝦L2(D10JAA->D10JA), 磯鮑(D74A->D74C)
+    "A1075K": { "D74A": "D74C", "D88C": "D88" }, // 千之味(屯): 磯鮑(D74A->D74C), 生雞軟骨粒(D88C->D88)
+    "A1075L": { "D74A": "D74C" }, // 御品(九龍灣): 磯鮑(D74A->D74C)
+    "A1075M": { "D74A": "D74C" }, // 御品(大埔): 磯鮑(D74A->D74C)
+    "A1089": { "C20A": "C22A" }, // 魚一(元朗): 穀物醋(C20A->C22A)
+    "A1089B": { "D51": "D51B" }, // 魚台(馬) 發泡膠: 希0魚(6條)(D51->D51B)
+    "A1135KB": { "D10K": "D10KC" }, // 殿(旺): 壽甜M(D10K->D10KC)
+    "A1135UB": { "C01D": "C45BA" }, // 大瀛喜(官): 紅椒絲(C01D->C45BA)
+    "A1222B": { "D19E": "D19ER", "D58B": "D58A", "D61C": "D61B" }, // 賀天(將): 川秀(D19E->D19ER), 中左刺500g(D58B->D58A), 台立(碼)(D61C->D61B)
+    "A1223": { "D21": "D21A" }, // 瀛鍋(九龍城): 大蚧籽(D21->D21A)
+    "A1255A": { "D03A": "D03B", "D19ER": "D19E" }, // 鮨政(上環): 牡丹蝦L(D03A->D03B), 三文魚籽(D19ER->D19E)
+    "A1300B": { "C58": "C58AB" }, // 壽司達人(恆安): 蚧GO(C58->C58AB)
+    "A1330": { "C59": "D01", "D03LB": "D03LCA" }, // 金東大(筲): 練膽醬(C59->D01), 無頭虎蝦16/20(D03LB->D03LCA)
+    "A1353D": { "D12": "D12A", "D21FB": "D21FA", "D21FC": "D21FA" }, // PROTON(元): 軟蚧大(D12->D12A), 魚子醬30g(D21FB->D21FA), 魚子醬5g(D21FC->D21FA)
+    "A1359": { "D19ER": "D19E" }, // 漁縣(旺角)--全部入箱: 三文魚籽(D19ER->D19E)
+    "A1364": { "D07": "D07A" }, // 八戶屋(屯門): 馬刀貝(D07->D07A)
+    "A1519E": { "D74A": "D74C" }, // 定食屋(筲): 磯鮑(D74A->D74C)
+    "A1545": { "D10JAA": "D10JA" }, // 越男仔(旺角): 赤蝦L2(D10JAA->D10JA)
+    "A1618B": { "D10JAA": "D10JA" }, // 帝王(旺角): 赤蝦L2(D10JAA->D10JA)
+    "A1620": { "D47": "D47B", "D64": "D64AE", "H03B": "M010" }, // 鮨勘(尖.): 北寄M(D47->D47B), 廣島蠔2L(D64->D64AE), 箱黑豬炸肉餅(H03B->M010)
+    "A1687": { "D42AA": "D42A" }, // 橋鍋居(紅): 青魚200g(D42AA->D42A)
+    "A1723": { "D19E": "D19ER" }, // 金寶食品(葵涌): 川秀(D19E->D19ER)
+    "A1759B": { "D19ER": "D19E" }, // 千葉鳥(元朗): 三文魚籽(D19ER->D19E)
+    "A1761": { "C35A": "C35B", "D19E": "D19ER", "D88DA": "D88C" }, // 松本(西環): 味淋魚干(C35A->C35B), 川秀(D19E->D19ER), CP炸雞軟骨(D88DA->D88C)
+    "A1766": { "D30B": "D30" }, // 壽司安(葵涌): 甲肝(碼)(D30B->D30)
+    "A1766D": { "D42AB": "D42AA" }, // 安(屯門): 青魚70p(D42AB->D42AA)
+    "A1777": { "C03A": "C03", "C58A": "C58", "D64AE": "D64" }, // 菊月町(觀塘): 樽櫻花蝦(C03A->C03), 龍蝦GO(C58A->C58), 廣島蠔3L(D64AE->D64)
+    "A1781": { "E04EA": "E04C" }, // 鉄人 (銅): 包豬扒130g(E04EA->E04C)
+    "A1894": { "C26": "C24F" }, // 浦和(上環): 胡麻(C26->C24F)
+    "A1905C": { "C28": "C28A" }, // 蟹仙(尖): 芥末粉平(C28->C28A)
+    "A1986": { "D65": "D65C", "E08": "E08AA", "M008C": "M008E" }, // MATA (長): KS年糕(D65->D65C), 餃子(E08->E08AA), 泰國雞扒(M008C->M008E)
+    "A1993A": { "D01": "C59", "F03": "F03B" }, // ZECOND(灣仔): 中國膽漿(碼)(D01->C59), 青口M(F03->F03B)
+    "A2033": { "D10ED": "D39GA" }, // 熊本燒肉(銅): 天蝦5L(D10ED->D39GA)
+    "A2060": { "C26": "C24F", "D42A": "D42AA" }, // 十和田(尖): 胡麻(C26->C24F), 青魚100P(D42A->D42AA)
+    "A2060B": { "E03": "E03K" }, // 十和田(科): 中國明雞(E03->E03K)
+    "A2070": { "D19ER": "D19E" }, // 大丈夫(長): 三文魚籽(D19ER->D19E)
+    "A2104PA": { "D06A": "D06" }, // 牛次郎 (尖沙咀): 厚蛋(D06A->D06)
+    "A2165": { "D10": "D10A" }, // 東京街(太子): 甘蝦2L(D10->D10A)
+    "A2165A": { "D18": "D18A" }, // 東京街(NEW): 大劍腩(碼)(D18->D18A)
+    "A2165D": { "C24B": "C24E", "C25A": "C44C", "C25F": "C34C" }, // 東京街(T5)(荃灣): 食研和風(C24B->C24E), 神燒肉汁(C25A->C44C), 食研照燒汁(C25F->C34C)
+    "A2167": { "D10JD": "D10JE" }, // Private(尖沙咀)-發泡膠箱: 開赤9L(D10JD->D10JE)
+    "A2177": { "D09HA": "D09LA", "D09HC": "D09LA", "D30": "D30B" }, // 瀛豐(銅)PACK箱: 熟帆立貝L(D09HA->D09LA), 熟帆立貝M(D09HC->D09LA), 鵝肝(碼)(D30->D30B)
+    "A2207A": { "D19E": "D19ER" }, // Harbour Fun(銅): 川秀(D19E->D19ER)
+    "A2239D": { "H01F": "C30" }, // 川燒王(荃) PACK箱: 紫薯餅(H01F->C30)
+    "A2246": { "D10": "D10A" }, // 鮨德(荔): 甘蝦2L(D10->D10A)
+    "A2248": { "D50B": "D50A" }, // 垚壽司(中): 生芥八(D50B->D50A)
+    "A2262A": { "C14G": "C14GA", "D12": "D12A", "E06": "E06A" }, // 九丁目(元朗): 萬字(C14G->C14GA), 軟蚧大(D12->D12A), 叉燒(碼)(E06->E06A)
+    "A2262F": { "D46A": "D46AA" }, // 七福神(元朗): K蟹棒(D46A->D46AA)
+    "A2327": { "C43A": "C70" }, // 鮨葵(上水): 天紙(C43A->C70)
+    "A2330A": { "C26": "C24F", "D10JAA": "D10JA", "D19ER": "D19E", "D30B": "D30", "E08": "E08AA" }, // 赤鬼(尖加拿芬): 胡麻(C26->C24F), 赤蝦L2(D10JAA->D10JA), 三文魚籽(D19ER->D19E), 甲肝(碼)(D30B->D30), 餃子(E08->E08AA)
+    "A2330C": { "D64BA": "D64B" }, // NO.21(尖沙咀): 日本吉蠔(D64BA->D64B)
+    "A2348": { "D22FA": "D22H" }, // 芝加哥(大埔)    pack箱: 鰻片8g(D22FA->D22H)
+    "A2351E": { "D03LC": "D03LB", "D03LCA": "D03LB", "D19E": "D19ER" }, // 日山(尖): 虎蝦13/15(D03LC->D03LB), 虎蝦16/20(D03LCA->D03LB), 川秀(D19E->D19ER)
+    "A2351P": { "D05F": "D05", "D19E": "D19ER" }, // 幸匠燒 (尖沙咀): 八爪魚切粒(D05F->D05), 川秀(D19E->D19ER)
+    "A2351S": { "D06": "D06A", "D19E": "D19ER" }, // 幸福鳥(K11): 平蛋(D06->D06A), 川秀(D19E->D19ER)
+    "A2351V": { "C22B": "C20BA" }, // 沐瀾MULAN(尖沙咀): 味附檸醋(C22B->C20BA)
+    "A2383": { "D10JA": "D10JAA" }, // 古今二(官): 赤蝦L1(D10JA->D10JAA)
+    "A2383A": { "D10JA": "D10JAA" }, // MR.MAKI(尖沙咀): 赤蝦L1(D10JA->D10JAA)
+    "A2383B": { "D10JA": "D10JAA" }, // 古今二銅: 赤蝦L1(D10JA->D10JAA)
+    "A2383C": { "D10JA": "D10JAA" }, // 古今二(荃灣千色匯): 赤蝦L1(D10JA->D10JAA)
+    "A2383E": { "D10JA": "D10JAA" }, // 古今二(尖沙咀): 赤蝦L1(D10JA->D10JAA)
+    "A2383F": { "D06": "D06A", "D10JA": "D10JAA" }, // 古今二(荃新天地): 平蛋(D06->D06A), 赤蝦L1(D10JA->D10JAA)
+    "A2383G": { "D10JA": "D10JAA" }, // MR.MAKI(灣仔): 赤蝦L1(D10JA->D10JAA)
+    "A2383H": { "D06": "D06A", "D10JA": "D10JAA" }, // 古今(旺角): 平蛋(D06->D06A), 赤蝦L1(D10JA->D10JAA)
+    "A2391": { "C28": "C28B", "D10JA": "D10JAA", "D12A": "D12", "D42A": "D42AA", "F03": "F03B" }, // 千之瀧(沙)-全部入箱: 芥末粉平(C28->C28B), 赤蝦L1(D10JA->D10JAA), 軟蚧細(D12A->D12), 青魚100P(D42A->D42AA), 青口M(F03->F03B)
+    "A2405": { "D30": "D30B", "D41F": "D41AB", "D72CA": "D72C" }, // 黑門尖壽司: 鵝肝(D30->D30B), 熟螢光魷(D41F->D41AB), 熟蟹腳(D72CA->D72C)
+    "A2405B": { "D30": "D30B", "D41F": "D41AB", "D72CA": "D72C" }, // 黑門銅壽司部: 鵝肝(D30->D30B), 熟螢光魷(D41F->D41AB), 熟蟹腳(D72CA->D72C)
+    "A2405BA": { "C59": "D01" }, // 黑門銅廚房: 練膽醬(C59->D01)
+    "A2425A": { "F03": "F03B" }, // 慢煮屋(觀塘): 青口M(F03->F03B)
+    "A2436E": { "D19ER": "D19E", "D61B": "D61C" }, // 曉月(紅磡): 三文魚籽(D19ER->D19E), 中國立柳(碼)(D61B->D61C)
+    "A2454": { "C14C": "C14DA", "C36E": "C36D", "D58A": "D58B", "D69B": "D69" }, // 竹虎(九): 東丸200ml(C14C->C14DA), 桶煮酒(C36E->C36D), K左刺(D58A->D58B), 魚鮫(碼)(D69B->D69)
+    "A2457": { "C28B": "C28A", "D19E": "D19ER" }, // 宴(尖)  pack箱: 金印(C28B->C28A), 川秀(D19E->D19ER)
+    "A2461B": { "C26": "C24F" }, // 絆(慈): 胡麻 (C26->C24F)
+    "A2463": { "C25G": "C25C", "D80AA": "D80A" }, // 南駅(香港仔): 福泉鰻魚汁(C25G->C25C), 煙三文100g(D80AA->D80A)
+    "A2499F": { "D05B": "D05BA" }, // Unnie (銅鑼灣): 八爪片(D05B->D05BA)
+    "A2550": { "C53F": "C53B", "D18A": "D18", "D21": "D21A", "E03K": "E03" }, // 淞壽司(西環): 味噌湯包(C53F->C53B), 細劍腩(碼)(D18A->D18), 大蚧籽(D21->D21A), 日本明雞(E03K->E03)
+    "A2566A": { "D19ER": "D19E", "D39B": "D39BA" }, // 雲壽司(中環): 三文魚籽(D19ER->D19E), 紋甲(D39B->D39BA)
+    "A2568": { "M003LB": "M003LBA" }, // 平記(北)-全部入箱，重冰: 碟A4西冷扒(M003LB->M003LBA)
+    "A2575": { "D60D": "D46C" }, // 一本食堂(官): 大崎(D60D->D46C)
+    "A2614A": { "D39B": "D39BA" }, // 嵐橋(尖): 紋甲(D39B->D39BA)
+    "A2625": { "D09HB": "D09GA", "D47": "D47A", "D51": "D51B" }, // 小漁港(荔)-發泡膠: 熟帆立貝5S(D09HB->D09GA), 北寄M(D47->D47A), 希0魚(6條)(D51->D51B)
+    "A2627B": { "D10EAA": "D10E" }, // 花月宮(屯門): 黃吉蝦(D10EAA->D10E)
+    "A2670": { "D10JD": "D10JE", "D22L": "D22J" }, // 罧懿一籮(屯門): 開赤9L(D10JD->D10JE), K鰻魚35尾(D22L->D22J)
+    "A2724A": { "D19E": "D19EA", "D19ER": "D19EA" }, // 究極(銅): 川秀(D19E->D19EA), 三文魚籽(D19ER->D19EA)
+    "A2732A": { "D52": "D52A" }, // 板卷(黃埔): 中沙(D52->D52A)
+    "A2732C": { "E04B": "E04EA" }, // 夢工埸(葵涌): 包豬扒100g(E04B->E04EA)
+    "A2769": { "C01D": "C45BA" }, // 惠比壽(葵芳): 紅椒絲(C01D->C45BA)
+    "A2888": { "D19E": "D19EA", "D19ER": "D19EA", "D30": "D30B" }, // 海膽仔: 川秀(D19E->D19EA), 三文魚籽(D19ER->D19EA), 鵝肝(碼)(D30->D30B)
+    "A2888A": { "C35A": "C35B" }, // 海膽仔(廚房部): 味淋魚干(C35A->C35B)
+    "W2804A": { "D88FC": "D88E" }, // 牛魔(旺角): 碟雞翼串(D88FC->D88E)
+    "W2805A": { "D03DA": "D03DC", "D10JA": "D10JAA", "D21": "D21A" }, // 日漁( 旺角): 熟蝦7L(D03DA->D03DC), 赤蝦L1(D10JA->D10JAA), 大蚧籽(D21->D21A)
+    "W2805B": { "C58": "C58AB", "D10JA": "D10JAA", "D21": "D21A" }, // 日漁 (啟德): 蚧GO(C58->C58AB), 赤蝦L1(D10JA->D10JAA), 大蚧籽(D21->D21A)
+    "W2809": { "D19ER": "D19E" }, // 鮨無雙(元): 三文魚籽(D19ER->D19E)
+    "W2823B": { "B50B": "D69", "H03B": "M010" }, // HIBI (觀): 條油甘(碼)(B50B->D69), 箱黑豬炸肉餅(H03B->M010)
+    "W2867": { "H01E": "H01" }, // Boon(官): 南瓜薯餅(H01E->H01)
+    "W2884": { "E03JA": "M008E" }, // 楓子咖啡(深): 炭燒雞扒(E03JA->M008E)
+    "W2939": { "E03": "E03K" }, // 八0(旺角): 中國明雞(E03->E03K)
+    "W2939B": { "D19ER": "D19E" }, // 阿媽(旺角): 三文魚籽(D19ER->D19E)
+    "W2969": { "D10N": "D10NA" }, // 日多郎(尖): 虎刺8g(D10N->D10NA)
+    "W2987": { "D15B": "D22E" }, // 無敵卷(油地)PACK箱: 穴子(D15B->D22E)
+    "W3029C": { "C51B": "C51BB" }, // Formal One (北角): 味椒鹽(橙蓋)(C51B->C51BB)
+    "W3045": { "D41AB": "D41F", "D58": "D58B" }, // 餓醫師(觀塘)-發泡膠箱: 螢光沖漬(D41AB->D41F), 左口邊20片(D58->D58B)
+    "W3086A": { "D19E": "D19ER" }, // 漢彩(油塘)--開單必須輸入PO: 川秀(D19E->D19ER)
+    "W3091A": { "D22FA": "D22FB" }, // 丼燃(尖)--如有牡丹入發泡膠: 鰻片8g(D22FA->D22FB)
+    "W3106": { "D88E": "D88FC" }, // OYASUMI(尖沙咀): 盒雞翼串(D88E->D88FC)
+    "W3109": { "D19ER": "D19E" }, // 大町丼(葵涌): 三文魚籽(D19ER->D19E)
+    "W3128": { "D10EAA": "D10E" }, // 船渦  (銅): 黃吉蝦(D10EAA->D10E)
+    "W3176": { "D30": "D30B" }, // Brother (元朗): 鵝肝(碼)(D30->D30B)
+    "W3200": { "D19E": "D19ER" }, // 北極星PLORIS(大埔): 川秀(D19E->D19ER)
+    "W3210": { "C14C": "C14DA", "C26": "C24F", "D06": "D06A", "D21": "D21A", "E04B": "E04EA", "E04C": "E04EA" }, // 海之日 (長洲): 東丸200ml(C14C->C14DA), 胡麻(C26->C24F), 平蛋(D06->D06A), 大蚧籽(D21->D21A), 包豬扒100g(E04B->E04EA), 箱大豬扒50p(E04C->E04EA)
+    "W3229": { "D19E": "D19ER", "D88FD": "D88AB", "M008D": "D88E" }, // 酩鬼(元朗): 川秀(D19E->D19ER), 碟雞皮串(D88FD->D88AB), 包雞中翼(平)(M008D->D88E)
+    "W3248A": { "D09HC": "D09" }, // JAB JAB(中): 熟帆立貝M(D09HC->D09)
+    "W3255": { "D58C": "D58B", "D74A": "D74C" }, // 山下(石籬): 日左刺500G(D58C->D58B), 磯鮑(D74A->D74C)
+    "W3279": { "D19E": "D19ER", "E06A": "E06" }, // 叄(屯門): 川秀(D19E->D19ER), 叉燒片(E06A->E06)
+    "W3345": { "C35B": "C35A" }, // 星橋(中環): 魚勝(C35B->C35A) 
+    "W3404": { "C26": "C24F" }, // 風流蝦(旺角): 胡麻(C26->C24F)
+    "W3408": { "D04B": "D03EB" }, // 鮨優(旺角): 牡丹蝦XL(D04B->D03EB)
+    "W3434A": { "D19E": "D19EA", "D19ER": "D19EA", "D59EA": "D59D" }, // 京都 (小西): 川秀(D19E->D19EA), 三文魚籽(D19ER->D19EA), 蟹肉C(D59EA->D59D)
+    "W3448": { "D19E": "D19ER", "D46A": "D46B", "M003LB": "M003LBA" }, // 磯の水產(官): 川秀(D19E->D19ER), K蟹棒(D46A->D46B), 碟A4西冷扒(M003LB->M003LBA)
+    "W3467A": { "M010": "H03B" }, // 吔(荃): 條黑豚肉眼(碼)(M010->H03B)
+    "W3467B": { "D58B": "D58" }, // 吔(官): 中左刺500g(D58B->D58)
+    "W3501A": { "D74A": "D74C", "D80A": "D80AA" }, // TIMES  (觀塘): 磯鮑(D74A->D74C), 煙三文魚(D80A->D80AA)
+    "W3504": { "E08": "E08AA" }, // Amusement(長): 餃子(E08->E08AA)
+    "W3560": { "D42AA": "D42AB" }, // 水族(官): 青魚200g(D42AA->D42AB)
+    "W3592": { "D10": "D10A", "D10JA": "D10JAA" }, // 一本(北角)逢星期一PACK箱: 甘蝦2L(D10->D10A), 赤蝦L1(D10JA->D10JAA)
+    "W3609": { "C36D": "C36E" }, // 金酒屋(荔): 支煮酒(C36D->C36E)
+    "W3629": { "D06": "D06A" }, // 海膽屋(上環): 平蛋(D06->D06A)
+    "W3645": { "D21": "D21A" }, // 賞島(太子): 大蚧籽(D21->D21A)
+    "W3654": { "D10K": "D10KC", "D19E": "D19ER", "D47A": "D47C", "D47B": "D47C", "D51": "D51B" }, // 田森(長) PACK箱: 壽甜M(D10K->D10KC), 川秀(D19E->D19ER), 北寄L(D47A->D47C), 北寄片S(D47B->D47C), 希0魚(6條)(D51->D51B)
+    "W3691": { "D10E": "D10EAA", "D12A": "D12", "D18A": "D18" }, // 一番屋(鴨): 白吉蝦(D10E->D10EAA), 軟蚧細(D12A->D12), 細劍腩(碼)(D18A->D18)
+    "W3704A": { "D69": "D69B", "D26": "D26D" }, // Why (沙田): 油甘柳(碼)(D69->D69B), 銀鱈魚大(D26->D26D)
+    "W3706": { "D10EAA": "D10E" }, // Rolling(小西): 黃吉蝦(D10EAA->D10E)
+    "W3708": { "B50": "D69" }, // 汕崎(荔): 油甘(碼)(B50->D69)
+    "W3712": { "D19E": "D19ER", "D57D": "D57", "D57E": "D57" }, // 禾日(銅): 川秀(D19E->D19ER), K明太子(D57D->D57), 明沙(日本)(D57E->D57)
+    "W3779": { "C26": "C24F", "D46AA": "D46A" }, // 小休亭(大圍): 胡麻(C26->C24F), 蟹柳20條(D46AA->D46A)
+    "W3788": { "D19ER": "D19EA" }, // 肉佐壽司 (銅): 三文魚籽(D19ER->D19EA)
+    "W3788A": { "D09HA": "D09HC" }, // 肉佐廚房(銅): 熟帆立貝L(D09HA->D09HC)
+    "W3798A": { "E03F": "E03A" }, // 加太賀廚房(紅磡): 芝麻雞翼(E03F->E03A)
+    "W3799B": { "C39": "C39B" }, // 鳥悅(葵涌): 甘口(C39->C39B)
+    "W3839": { "D54": "D54A" }, // 茶.丼飯(鑽)-過千分單: 帶子裙邊(D54->D54A)
+    "W3844": { "D19E": "D19ER", "D47": "D47B" }, // 備長(銅)   重冰pack箱: 川秀(D19E->D19ER), 北寄M(D47->D47B)
+    "W3852": { "D21": "D21A" }, // 丼盛(灣仔): 大蚧籽(D21->D21A)
+    "W3874": { "D12A": "D12" }, // 泰鑫 (灣仔): 軟蚧細(D12A->D12)
+    "W3877": { "C26C": "C20BA" }, // 禪 (沙): 柚子沙津汁(C26C->C20BA)
+    "W3897": { "C25G": "C25C", "H02": "H02AA" }, // 南瀛(尖): 福泉鰻魚汁(C25G->C25C), 漢堡(H02->H02AA)
+    "W3905": { "D88E": "D88FC" }, // 瀛樂(將): 盒雞翼串(D88E->D88FC)
+    "W3908": { "C22B": "C20BA", "C38A": "C38", "D03LCA": "D03LB", "D30": "D30B", "E08": "E08AA" }, // 酒津(銅): 味附檸醋(C22B->C20BA), 東字白湯(C38A->C38), 虎蝦16/20(D03LCA->D03LB), 鵝肝(碼)(D30->D30B), 餃子(E08->E08AA)
+    "W3920": { "C35A": "C35B", "D57": "D57D" }, // 壽司駅(西環): 味淋魚干(C35A->C35B), 明沙中國(D57->D57D)
+    "W3928": { "E03K": "E03" }, // YMCA (尖)發泡膠: 日本明雞(E03K->E03)
+    "W3948A": { "C22B": "C20BA" }, // 金.居酒屋(紅磡): 味附檸醋(C22B->C20BA)
+    "W4035": { "E04D": "E04C" }, // 悠喵(九龍城): 箱豬扒100g(E04D->E04C)
+    "W4041": { "D10JA": "D10JAA" }, // 鮨龍(九龍城): 赤蝦L1(D10JA->D10JAA)
+    "W4046": { "D21A": "D21" }, // Sofi (上環): 中蚧籽(D21A->D21)
+    "W4055": { "C25A": "C44A" }, // 協和 (荔): 神燒肉汁(C25A->C44A)
+    "W4056": { "D19ER": "D19E" }, // 瀧宴(銅): 三文魚籽(D19ER->D19E)
+    "W4079": { "E06": "E06A" }, // 紅噹噹(葵): 叉燒(碼)(E06->E06A)
+    "W4081": { "D07": "D07A" }, // SushiHangry(馬): 馬刀貝(D07->D07A)
+    "W4087": { "E04EA": "E04B", "E06A": "E06" }, // 燈籠食堂(屯): 包豬扒130g(E04EA->E04B), 叉燒片(E06A->E06)
+    "W4095": { "D10": "D10A", "D10K": "D10KC" }, // 海底撈 (尖): 甘蝦2L(D10->D10A), 壽甜M(D10K->D10KC)
+    "W4104": { "D09LA": "D43" }, // 幸滿(鴨): 扇貝片(D09LA->D43)
+    "W4107": { "D39HA": "D39H" }, // WALNUT(葵): 阿魷魚一夜干(D39HA->D39H)
+    "W4116": { "D68": "D68A" }, // 龍虎豹 (中環): 付皮(D68->D68A)
+};
+
+    // ==========================================
+// 🔥 新增：AI 分身擴展大腦 (自動補全 #A 與 #P，無視後綴差異)
+// ==========================================
+Object.keys(autoConvertRules).forEach(key => {
+    // 1. 抓出純淨的客戶編號 (自動切掉結尾的 #A 或 #P)
+    let baseCode = key.replace(/(#A|#P)$/, ''); 
+    
+    // 2. 系統自動生成三個互通的分身：原版、帶 #A、帶 #P
+    let clones = [baseCode, baseCode + '#A', baseCode + '#P'];
+    
+    clones.forEach(cloneKey => {
+        // 如果字典裡還沒有這個分身，先幫它建一個空位
+        if (!autoConvertRules[cloneKey]) {
+            autoConvertRules[cloneKey] = {};
+        }
+        // 3. 將規則完美融合 (互補合併，不遺漏任何產品)
+        Object.assign(autoConvertRules[cloneKey], autoConvertRules[key]);
+    });
+});
+    // 🔥 自動建立黃色 Toast 通知容器 (不用動 HTML，系統自己畫！)
+    const toastContainer = document.createElement('div');
+    toastContainer.id = 'toastContainer';
+    toastContainer.style.cssText = 'position: fixed; top: 90px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; width: 90%; max-width: 400px; align-items: center;';
+    document.body.appendChild(toastContainer);
+
+        function showAutoConvertToast(targetName) {
+        // 🔥 核心修復 1：彈出新通知前，先無情地清空舊通知！(防止狂點刷屏)
+        toastContainer.innerHTML = '';
+
+        const toast = document.createElement('div');
+        toast.style.cssText = 'background-color: #ffc107; color: #000; padding: 12px 20px; border-radius: 12px; font-weight: bold; font-size: 0.95rem; box-shadow: 0 4px 15px rgba(0,0,0,0.25); opacity: 0; transform: translateY(-20px); transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55); text-align: center; border: 2px solid #fff;';
+        toast.innerHTML = `✨ 已自動為您切換為常用規格：<br><span style="color:#d32f2f; font-size:1.1rem; line-height:1.8;">${targetName}</span>`;
+        
+        toastContainer.appendChild(toast);
+        
+        // 彈出動畫
+        setTimeout(() => { toast.style.opacity = '1'; toast.style.transform = 'translateY(0)'; }, 10);
+        
+        // 3.5秒後自動優雅消失
+        setTimeout(() => {
+            toast.style.opacity = '0'; toast.style.transform = 'translateY(-20px)';
+            setTimeout(() => toast.remove(), 300);
+        }, 3500);
+    }
+
+    // ==========================================
+    // 🔥 核心數量控制器 (已植入防呆攔截大腦)
+    // ==========================================
+    function updateQty(c, d) {
+        if (isProductOOS(c)) return;
+
+        // 🔥 攔截器：智慧防呆轉換 (發生在所有邏輯之前)
+        let originalC = c;
+        if (typeof autoConvertRules !== 'undefined' && autoConvertRules[customerCode] && autoConvertRules[customerCode][c]) {
+            let targetCode = autoConvertRules[customerCode][c];
+            
+            // 只有在「增加數量」時才跳通知 (減少數量時不吵客戶)
+            if (d > 0) {
+                let targetName = typeof productMap !== 'undefined' && productMap[targetCode] ? productMap[targetCode].name : targetCode;
+                showAutoConvertToast(targetName);
+            }
+            
+            c = targetCode; // 將大腦裡的代碼強制替換為正確的產品代碼！
+        }
+
+        // 🔥 升級：點擊加號的限購攔截 (支援 VIP 前綴智慧辨識)
+        if (d > 0) {
+            let currentLimit = Infinity;
+            if (typeof purchaseLimits !== 'undefined' && purchaseLimits[c] !== undefined) {
+                currentLimit = purchaseLimits[c];
+            }
+            if (typeof vipPurchaseLimits !== 'undefined' && vipPurchaseLimits[c]) {
+                let isVip = vipPurchaseLimits[c].prefixes && vipPurchaseLimits[c].prefixes.some(prefix => customerCode.startsWith(prefix));
+                if (isVip) {
+                    currentLimit = vipPurchaseLimits[c].limit;
+                }
+            }
+            
+            let currentQty = cart[c] || 0;
+            if (currentLimit !== Infinity && currentQty >= currentLimit) {
+                document.getElementById('limitModalMsg').innerText = `【${productMap[c] ? productMap[c].name : c}】目前貨量有限，您最多只能購買 ${currentLimit} 盒！`;
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('limitModal')).show();
+                return; // 數量已滿，直接阻止繼續增加！
+            }
+        }
+
+        // ==========================================
+        // 🔥 升級：10倍數產品 (C07, C07A) 原箱防呆邏輯
+        // ==========================================
+        let isBox = (cartUnits[c] === 'temp_box');
+        if (!cartUnits[c]) {
+            let baseC = c.replace('_BOX', '');
+            let isGlobal = typeof globalBoxItems !== 'undefined' && (globalBoxItems.includes(c) || globalBoxItems.includes(baseC));
+            let isNative = typeof isNativeBox === 'function' && isNativeBox(c);
+            if (isGlobal || isNative) isBox = true;
+        }
+
+        // 如果是 10 倍數產品，且「不是」原箱，才乘以 10！(原箱就乖乖加 1 箱)
+        if (stepTenCodes.includes(c) && !isBox) {
+            d = d * 10;
+        }
+
+        // 🔥 新增：強制活赤貝 (B01) 永遠為 KG，不再彈窗
+        if (c === 'B01') cartUnits[c] = 'kg';
+
+        if(eelProducts.includes(c)){
+            if(d>0&&(!cart[c]||cart[c]===0)){cart[c]=5;cartUnits[c]='kg'}else{if(!cart[c])cart[c]=0;cart[c]+=d*5}
+            if(cart[c]<=0){delete cart[c];delete cartUnits[c]}
+            syncUI(c); 
+            
+            // 鰻魚特例的視覺代理同步
+            if (originalC !== c) proxySyncUI(originalC, c);
+            return;
+        }
+
+        // --- 檢查是否需要彈窗 (包含：通用稱重產品 + 特殊白名單產品) ---
+        let isConditional = false;
+        if (typeof conditionalPopupRules !== 'undefined' && conditionalPopupRules[c]) {
+            if (conditionalPopupRules[c].includes(customerCode)) {
+                isConditional = true;
+            }
+        }
+
+        if (d > 0 && (!cart[c] || cart[c] === 0) && (weightedProducts.includes(c) || isConditional) && !cartUnits[c]) {
+            pendingProductCode = c; // 這裡記錄的已經是轉換後的正確代碼了！
+            const leftBtn = document.getElementById('btn-unit-left');
+            const rightBtn = document.getElementById('btn-unit-right');
+            
+            const modalTitle = document.querySelector('#unitSelectionModal .modal-title');
+            const modalDesc = document.querySelector('#unitSelectionModal .modal-body p');
+
+            leftBtn.className = 'btn-unit-select';
+            rightBtn.className = 'btn-unit-select';
+
+            if (modalTitle) modalTitle.innerText = "請選擇計價單位";
+            if (modalDesc) modalDesc.innerText = "此產品支持稱重計價，請確認單位：";
+
+            // --- 針對不同產品的樣式邏輯 ---
+            if (c === 'C22F') {
+                if(modalTitle) modalTitle.innerText = "請選擇下單單位";
+                if(modalDesc) modalDesc.innerText = "請確認單位："; 
+                leftBtn.classList.add('piece'); leftBtn.innerHTML = '<i class="bi bi-check-circle"></i> 支<br>(默認)'; leftBtn.onclick = function() { confirmUnit('piece'); };
+                rightBtn.classList.add('kg'); rightBtn.innerHTML = '<i class="bi bi-box-seam"></i> 箱<br>(8支)'; rightBtn.onclick = function() { confirmUnit('box'); }; 
+            } 
+            else if (c === 'D31A') {
+                if(modalTitle) modalTitle.innerText = "請選擇下單單位";
+                if(modalDesc) modalDesc.innerText = "請確認單位："; 
+                leftBtn.classList.add('piece'); leftBtn.innerHTML = '<i class="bi bi-check-circle"></i> 條<br>(默認)'; leftBtn.onclick = function() { confirmUnit('piece'); };
+                rightBtn.classList.add('kg'); rightBtn.innerHTML = '<i class="bi bi-box-seam"></i> 箱<br>(40條)'; rightBtn.onclick = function() { confirmUnit('box'); }; 
+            }
+            else if (c === 'M007') {
+                if(modalTitle) modalTitle.innerText = "請選擇下單單位";
+                if(modalDesc) modalDesc.innerText = "請確認單位："; 
+                leftBtn.classList.add('piece'); leftBtn.innerHTML = '<i class="bi bi-check-circle"></i> 條<br>(默認)'; leftBtn.onclick = function() { confirmUnit('piece'); };
+                rightBtn.classList.add('kg'); rightBtn.innerHTML = '<i class="bi bi-box-seam"></i> 箱<br>(約50磅)'; rightBtn.onclick = function() { confirmUnit('box'); }; 
+            }
+            else if (c === 'D69B') {
+                if(modalTitle) modalTitle.innerText = "請選擇下單單位";
+                if(modalDesc) modalDesc.innerText = "請確認單位："; 
+                leftBtn.classList.add('piece'); leftBtn.innerHTML = '<i class="bi bi-check-circle"></i> 包<br>(默認)'; leftBtn.onclick = function() { confirmUnit('piece'); };
+                rightBtn.classList.add('kg'); rightBtn.innerHTML = '<i class="bi bi-box-seam"></i> 箱<br>'; rightBtn.onclick = function() { confirmUnit('box'); }; 
+            }    
+            else if (c === 'C53B') {
+                if(modalTitle) modalTitle.innerText = "請選擇下單單位";
+                if(modalDesc) modalDesc.innerText = "請確認單位："; 
+                leftBtn.classList.add('piece'); leftBtn.innerHTML = '<i class="bi bi-check-circle"></i> 包<br>(默認)'; leftBtn.onclick = function() { confirmUnit('piece'); };
+                rightBtn.classList.add('kg'); rightBtn.innerHTML = '<i class="bi bi-box-seam"></i> 箱<br>(10包)'; rightBtn.onclick = function() { confirmUnit('box'); }; 
+            }
+            else if (c === 'C39A') {
+                if(modalTitle) modalTitle.innerText = "請選擇下下單單位";
+                if(modalDesc) modalDesc.innerText = "請確認單位："; 
+                leftBtn.classList.add('piece'); leftBtn.innerHTML = '<i class="bi bi-check-circle"></i> 盒<br>(默認)'; leftBtn.onclick = function() { confirmUnit('piece'); };
+                rightBtn.classList.add('kg'); rightBtn.innerHTML = '<i class="bi bi-box-seam"></i> 箱<br>(60盒)'; rightBtn.onclick = function() { confirmUnit('box'); }; 
+            }
+            else if (c === 'C54') {
+                if(modalTitle) modalTitle.innerText = "請選擇下單單位";
+                if(modalDesc) modalDesc.innerText = "請確認單位："; 
+                leftBtn.classList.add('piece'); leftBtn.innerHTML = '<i class="bi bi-check-circle"></i> 包<br>(默認)'; leftBtn.onclick = function() { confirmUnit('piece'); };
+                rightBtn.classList.add('kg'); rightBtn.innerHTML = '<i class="bi bi-box-seam"></i> 箱<br>(20包)'; rightBtn.onclick = function() { confirmUnit('box'); }; 
+            }
+            else if (c === 'H02A') {
+                if(modalTitle) modalTitle.innerText = "請選擇下單單位";
+                if(modalDesc) modalDesc.innerText = "請確認單位："; 
+                leftBtn.classList.add('piece'); leftBtn.innerHTML = '<i class="bi bi-check-circle"></i> 包<br>(默認)'; leftBtn.onclick = function() { confirmUnit('piece'); };
+                rightBtn.classList.add('kg'); rightBtn.innerHTML = '<i class="bi bi-box-seam"></i> 箱<br>(8包)'; rightBtn.onclick = function() { confirmUnit('box'); }; 
+            }    
+            else if (c === 'D84') {
+                if(modalTitle) modalTitle.innerText = "請選擇下單單位";
+                if(modalDesc) modalDesc.innerText = "請確認單位："; 
+                leftBtn.classList.add('piece'); leftBtn.innerHTML = '<i class="bi bi-check-circle"></i> 包<br>(默認)'; leftBtn.onclick = function() { confirmUnit('piece'); };
+                rightBtn.classList.add('kg'); rightBtn.innerHTML = '<i class="bi bi-box-seam"></i> 箱<br>(20包)'; rightBtn.onclick = function() { confirmUnit('box'); }; 
+            }
+            else if (c === 'D52') {
+                if(modalTitle) modalTitle.innerText = "請選擇下單單位";
+                if(modalDesc) modalDesc.innerText = "請確認單位："; 
+                leftBtn.classList.add('piece'); leftBtn.innerHTML = '<i class="bi bi-check-circle"></i> 包<br>(默認)'; leftBtn.onclick = function() { confirmUnit('piece'); };
+                rightBtn.classList.add('kg'); rightBtn.innerHTML = '<i class="bi bi-box-seam"></i> 箱<br>(8包)'; rightBtn.onclick = function() { confirmUnit('box'); }; 
+            }
+            else if (c === 'D42AA') {
+                if(modalTitle) modalTitle.innerText = "請選擇下單單位";
+                if(modalDesc) modalDesc.innerText = "請確認單位："; 
+                leftBtn.classList.add('piece'); leftBtn.innerHTML = '<i class="bi bi-check-circle"></i> 包<br>(默認)'; leftBtn.onclick = function() { confirmUnit('piece'); };
+                rightBtn.classList.add('kg'); rightBtn.innerHTML = '<i class="bi bi-box-seam"></i> 箱<br>(25包)'; rightBtn.onclick = function() { confirmUnit('box'); }; 
+            }
+            else if (c === 'B01') {
+                if(modalTitle) modalTitle.innerText = "請選擇下單單位";
+                if(modalDesc) modalDesc.innerText = "請確認活赤貝單位："; 
+                leftBtn.classList.add('piece'); leftBtn.innerHTML = '<i class="bi bi-speedometer2"></i> KG<br>(默認)'; leftBtn.onclick = function() { confirmUnit('kg'); };
+                rightBtn.classList.add('kg'); rightBtn.innerHTML = '<i class="bi bi-box-seam"></i> 隻'; rightBtn.onclick = function() { confirmUnit('piece'); };
+            }
+            else if (c === 'M007') {
+                if(modalTitle) modalTitle.innerText = "請選擇下單單位";
+                if(modalDesc) modalDesc.innerText = "請確認單位："; 
+                leftBtn.classList.add('piece'); leftBtn.innerHTML = '<i class="bi bi-check-circle"></i> 條<br>(默認)'; leftBtn.onclick = function() { confirmUnit('piece'); };
+                rightBtn.classList.add('kg'); rightBtn.innerHTML = '<i class="bi bi-box-seam"></i> 箱<br>(原箱)'; rightBtn.onclick = function() { confirmUnit('box'); }; 
+            }
+            else if (c === 'D52BA') {
+                if(modalTitle) modalTitle.innerText = "請選擇下單單位";
+                if(modalDesc) modalDesc.innerText = "請確認單位："; 
+                leftBtn.classList.add('piece'); leftBtn.innerHTML = '<i class="bi bi-check-circle"></i> 包<br>(默認)'; leftBtn.onclick = function() { confirmUnit('temp_piece'); };
+                rightBtn.classList.add('kg'); rightBtn.innerHTML = '<i class="bi bi-box-seam"></i> 箱<br>(25包)'; rightBtn.onclick = function() { confirmUnit('temp_box'); }; 
+            }
+            else if (c === 'C51' || c === 'C56') {
+                if(modalTitle) modalTitle.innerText = "請選擇下單單位";
+                if(modalDesc) modalDesc.innerText = "請確認單位："; 
+                leftBtn.classList.add('piece'); leftBtn.innerHTML = '<i class="bi bi-check-circle"></i> 支<br>(默認)'; leftBtn.onclick = function() { confirmUnit('temp_piece'); };
+                rightBtn.classList.add('kg'); rightBtn.innerHTML = '<i class="bi bi-collection"></i> 排<br>(10支)'; rightBtn.onclick = function() { confirmUnit('temp_pack'); }; 
+            }
+            else if (c === 'B14') {
+                leftBtn.classList.add('piece'); leftBtn.innerHTML = '<i class="bi bi-fish"></i> 條<br>(默認)'; leftBtn.onclick = function() { confirmUnit('piece'); };
+                rightBtn.classList.add('kg'); rightBtn.innerHTML = '<i class="bi bi-box-seam"></i> 箱<br>(3條)'; rightBtn.onclick = function() { confirmUnit('box3'); };
+            } 
+            else {
+                leftBtn.classList.add('piece'); leftBtn.innerHTML = '<i class="bi bi-box-seam"></i> 件 / 包<br>(默認)'; leftBtn.onclick = function() { confirmUnit('piece'); };
+                rightBtn.classList.add('kg'); rightBtn.innerHTML = '<i class="bi bi-speedometer2"></i> KG<br>(公斤)'; rightBtn.onclick = function() { confirmUnit('kg'); };
+            }
+
+            const myModalEl = document.getElementById('unitSelectionModal');
+            const myModal = bootstrap.Modal.getOrCreateInstance(myModalEl);
+            myModal.show();
+            return;
+        }
+
+        // 🔥 新增：攔截限購邏輯 (已修復 10 倍數疊加 Bug)
+        if (d > 0 && typeof purchaseLimits !== 'undefined' && purchaseLimits[c] !== undefined) {
+            let currentQty = cart[c] || 0;
+            let addedQty = d; // 🔥 d 在上面已經是正確數量了，這裡千萬不能再乘 10！
+            if (eelProducts.includes(c)) addedQty = d * 5; 
+            
+            if (currentQty + addedQty > purchaseLimits[c]) {
+                document.getElementById('limitModalMsg').innerText = `【${productMap[c] ? productMap[c].name : c}】目前貨量有限，最多限購 ${purchaseLimits[c]}！`;
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('limitModal')).show();
+                return; // 直接終止
+            }
+        }
+
+        // 🔥 修復：當購物車是空的時候第一次加入，強制幫它寫入「箱」的記憶
+        if (!cart[c]) {
+            cart[c] = 0; 
+            let baseC = c.replace('_BOX', '');
+            let isGlobal = typeof globalBoxItems !== 'undefined' && (globalBoxItems.includes(c) || globalBoxItems.includes(baseC));
+            let isNative = typeof isNativeBox === 'function' && isNativeBox(c);
+            
+            if (isGlobal) {
+                cartUnits[c] = 'temp_box'; // 強制原箱
+            } else if (isNative && cartUnits[c] !== 'temp_piece') {
+                cartUnits[c] = 'temp_box'; // 客戶專屬原箱 (未切換單件)
+            }
+        }
+        
+        cart[c] += d;
+        if(cart[c] <= 0){ delete cart[c]; delete cartUnits[c]; }
+        syncUI(c);
+
+        // ==========================================
+        // 🔥 視覺代理同步：讓錯誤產品的按鈕也乖乖跳動！
+        // ==========================================
+        if (originalC !== c) {
+            proxySyncUI(originalC, c);
+        }
+    }
+
+    // 輔助小工具：專門用來讓錯誤產品的格子「借用」正確產品的數字來顯示
+    // ==========================================
+// 🔥 視覺代理同步 (自動轉換跨頁面聯動)
+// ==========================================
+function proxySyncUI(originalC, targetC) {
+    let fakeQty = cart[targetC] || 0; 
+    let u = cartUnits[targetC];
+    let val = fakeQty;
+    let cls = 'qty-input';
+    
+    if (fakeQty > 0) {
+        if (u === 'kg') { 
+            val += ' K'; cls += ' unit-kg'; 
+        // 🔥 關鍵修復：這裡加上了 box 和 box3 的判斷
+        } else if (u === 'temp_box' || u === 'box' || u === 'box3') { 
+            val += ' 箱'; cls += ' unit-box'; 
+        } else if (u === 'temp_pack') { 
+            val += ' 排'; cls += ' unit-box'; 
+        } else {
+            // 🔥 轉換過來的產品也要顯示單位
+            if (typeof weightedUnitMap !== 'undefined' && weightedUnitMap[targetC]) {
+                val += ' ' + weightedUnitMap[targetC];
+            }
+        }
+    }
+    
+    // 一樣用 querySelectorAll 確保所有分頁的錯誤格子都會同步更新
+    document.querySelectorAll(`#qty-${originalC}`).forEach(wrongInput => {
+        wrongInput.value = fakeQty > 0 ? val : 0;
+        wrongInput.className = cls;
+    });
+
+    document.querySelectorAll(`#row-${originalC}`).forEach(wrongRow => {
+        if (fakeQty > 0) wrongRow.classList.add('selected');
+        else wrongRow.classList.remove('selected');
+    });
+}
+    
+function confirmUnit(u){
+    if(pendingProductCode){
+        cartUnits[pendingProductCode] = u;
+        if (pendingManualQty !== null) {
+            cart[pendingProductCode] = pendingManualQty;
+            pendingManualQty = null; 
+            syncUI(pendingProductCode);
+        } else {
+            updateQty(pendingProductCode, 1);
+        }
+        unitModal.hide();
+        pendingProductCode = null;
+    }
+}
+    
+// ==========================================
+// 🔥 UI 同步大腦 (加入單位顯示、保持黑字、支援所有箱規)
+// ==========================================
+function syncUI(c){
+    const q = cart[c] || 0;
+    const u = cartUnits[c];
+    
+    // 掃描畫面上所有同名的格子 (確保常用清單和全部產品都會一起跳動)
+    document.querySelectorAll(`#qty-${c}`).forEach(i => {
+        let cls = 'qty-input'; // 預設黑字
+        let val = q;
+        
+        if (q > 0) {
+            if (u === 'kg') { 
+                val += ' K'; cls += ' unit-kg'; 
+            // 🔥 關鍵修復：這裡也加上了 box 和 box3 的判斷
+            } else if (u === 'temp_box' || u === 'box' || u === 'box3') { 
+                val += ' 箱'; cls += ' unit-box'; 
+            } else if (u === 'temp_pack') { 
+                val += ' 排'; cls += ' unit-box'; 
+            } else {
+                // 🔥 如果是單件，去查字典看要不要加「條/隻/包」 (不改變 cls，維持黑字)
+                if (typeof weightedUnitMap !== 'undefined' && weightedUnitMap[c]) {
+                    val += ' ' + weightedUnitMap[c];
+                }
+            }
+        }
+        
+        i.className = cls;
+        i.value = q > 0 ? val : 0;
+        
+        const r = i.closest('.product-row');
+        if (r && !r.classList.contains('modal-row')) {
+            q > 0 ? r.classList.add('selected') : r.classList.remove('selected');
+        }
+    });
+    
+    calcTotal(); 
+    saveCart(); 
+    if (document.getElementById('cartModal') && document.getElementById('cartModal').classList.contains('show')) {
+        renderCartModalItems();
+    }
+}
+    
+    function clearCart(){if(Object.keys(cart).length===0)return;if(confirm("確定要清空所有已選貨品嗎？")){cart={};cartUnits={};saveCart();renderFrequent();renderAll();calcTotal();renderCartModalItems()}}
+    
+    function calcTotal(){
+        const count=Object.keys(cart).length; document.getElementById('totalQty').innerText=count;
+        const b=document.getElementById('viewCartBtn');
+        if(count>0){b.classList.add('active');b.disabled=false;b.innerHTML=`<i class="bi bi-cart-check-fill"></i> 查看已選 (${count})`}else{b.classList.remove('active');b.disabled=true;b.innerHTML=`<i class="bi bi-cart3"></i> 查看已選`}
+    }
+    function openCartModal(){renderCartModalItems();cartModal.show()}
+    function renderCartModalItems(){
+        const c=document.getElementById('cartModalBody');
+        if(Object.keys(cart).length===0){c.innerHTML='<div class="text-center p-4 text-muted">尚未選擇任何產品</div>';return}
+        let h=''; for(let k in cart){const p=productMap[k];h+=createProductRow(p?p.fullName:`${k} (未知)`);} c.innerHTML=h;
+    }
+    
+    function confirmNote(decision) {
+        tempNoteDecision = decision;
+        noteModal.hide();
+        executeSendWhatsApp(pendingSendMode);
+    }
+
+    function sendWhatsApp(mode){
+        if(!customerName || !customerCode) { alert("請先設定客戶資料！"); openSetupModal(); return; }
+        if(Object.keys(cart).length===0){alert("請先選擇產品！");return}
+        
+        let currentClient = clientDB[customerCode];
+
+        // 🔥 攔截多部門結算
+        if (isMultiDept && !document.getElementById('deptCheckModal').classList.contains('show')) {
+            deptModal.hide(); // 確保 modal 狀態正確
+            pendingSendMode = mode;
+            
+            // 保存當前部門
+            deptCarts[currentDeptId].cart = JSON.parse(JSON.stringify(cart));
+            deptCarts[currentDeptId].units = JSON.parse(JSON.stringify(cartUnits));
+            saveCart(); // 保存到 localStorage
+
+            showDeptCheckModal(mode);
+            return;
+        }
+
+        if (currentClient && currentClient.optional_note) {
+            document.getElementById('noteModalTitle').innerText = "⚠️ 附加服務詢問";
+            document.getElementById('noteModalQuestion').innerText = currentClient.optional_note.title || "請問需要此服務嗎？";
+            pendingSendMode = mode; 
+            noteModal.show();        
+            return;                  
+        }
+
+        executeSendWhatsApp(mode);
+    }
+
+    function executeSendWhatsApp(mode) {
+        // 如果是從多部門 modal 點擊的，先隱藏 modal
+        if(isMultiDept) deptModal.hide();
+
+        const dateStr = getDeliveryDate();
+        let msg = "";
+        let currentClient = clientDB[customerCode];
+
+        // 定義格式化函數 (🔥 視覺絕對對齊 + 數量靠右對齊 + 智慧單位版)
+        const fmt = (c, qRaw, uRaw) => {
+            const p = productMap[c];
+            const n = p ? p.name : c;
+            let q = qRaw.toString();
+            
+            // 預設對齊區塊：7個空格
+            let alignBlock = "       "; 
+
+            // 🔥 依據不同單位，分配專屬的「視覺補償空格」
+            if (uRaw === 'temp_piece' || uRaw === 'piece' || !uRaw) {
+                if (typeof weightedUnitMap !== 'undefined' && weightedUnitMap[c]) {
+                    let uName = weightedUnitMap[c];
+                    if (uName === 'set') {
+                        alignBlock = " set   "; 
+                    } else {
+                        alignBlock = `  ${uName}   `; 
+                    }
+                } else {
+                    alignBlock = "       "; 
+                }
+            } else if (c === 'B14C' || c === 'B14AA') {
+                alignBlock = "  箱   ";
+            } else if(uRaw === 'kg') {
+                alignBlock = "   K   ";
+            } else if(uRaw === 'box3') {
+                // 🔥 關鍵修復：乘 3 之後，也要記得去字典把「條」拿出來補上去！
+                q = (qRaw * 3).toString(); 
+                if (typeof weightedUnitMap !== 'undefined' && weightedUnitMap[c]) {
+                    alignBlock = `  ${weightedUnitMap[c]}   `; 
+                } else {
+                    alignBlock = "       "; 
+                }
+            } else if(uRaw === 'box' && (c === 'C22F' || c === 'M007' || c === 'D69B' || c === 'D31A' || c === 'C53B' || c === 'C39A' || c === 'C54' || c === 'D84' || c === 'D52' || c === 'D42AA' || c === 'H02A')) {
+                alignBlock = "  箱   ";
+            } else if(uRaw === 'temp_box') {
+                alignBlock = "  箱   ";
+            } else if(uRaw === 'temp_pack') {
+                alignBlock = "  排   ";
+            } else if (typeof isNativeBox === 'function' && isNativeBox(c)) {
+                alignBlock = "  箱   ";
+            }
+
+            let displayCode = c.endsWith('_BOX') ? c.replace('_BOX', '') : c;
+            if (currentClient && currentClient.alias_codes && currentClient.alias_codes[displayCode]) {
+                displayCode = currentClient.alias_codes[displayCode];
+            }
+            
+            return ` ${q.padStart(2, ' ')}${alignBlock}${n}  (${displayCode})\n`;
+        };
+        // 🔥 多部門模式的訊息生成邏輯
+        if (isMultiDept) {
+            // 確保當前部門的數據是最新的
+            deptCarts[currentDeptId].cart = JSON.parse(JSON.stringify(cart));
+            deptCarts[currentDeptId].units = JSON.parse(JSON.stringify(cartUnits));
+
+            const config = multiDeptRules[customerCode];
+            let hasAnyOrder = false;
+
+            config.depts.forEach((dept, index) => {
+                const dCart = deptCarts[dept.id].cart;
+                const dUnits = deptCarts[dept.id].units;
+                const codes = Object.keys(dCart).sort();
+
+                if (codes.length > 0) {
+                    hasAnyOrder = true;
+                    // 標題格式
+                    if (index === 0) {
+                        msg += `${customerCode} ${customerName}\n`;
+                    } else {
+                        msg += `\n--------------------------------\n\n`;
+                        msg += `${customerCode} ${customerName}（${dept.name}）\n`;
+                    }
+                    msg += `送貨日期：${dateStr}\n訂貨單：\n\n`;
+
+                    for (let c of codes) {
+                        msg += fmt(c, dCart[c], dUnits[c]);
+                        if(itemCounts[c]) itemCounts[c]++; else itemCounts[c] = 1;
+                    }
+                }
+            });
+
+            if (!hasAnyOrder) { alert("所有部門均未選擇產品！"); return; }
+
+        } else {
+            // 普通模式
+            msg = `${customerCode} ${customerName}\n送貨日期：${dateStr}\n訂貨單：\n\n`;
+            let codes = Object.keys(cart).sort(); 
+            for(let c of codes){
+                msg += fmt(c, cart[c], cartUnits[c]);
+                if(itemCounts[c]) itemCounts[c]++; else itemCounts[c] = 1;
+            }
+        }
+
+        // 附加備註
+        if (currentClient && currentClient.optional_note && tempNoteDecision === true) {
+            msg += `\n⚠️ 備註：${currentClient.optional_note.content}\n`;
+        }
+        else if (currentClient && currentClient.note && !currentClient.optional_note) {
+            msg += `\n⚠️ 備註：${currentClient.note}\n`;
+        }
+        
+        tempNoteDecision = false;
+
+        // 更新統計數據
+        let hasNewItems = false;
+        if(isMultiDept) {
+             // 簡單判斷，實際可以更細緻
+             hasNewItems = true; 
+        } else {
+             hasNewItems = Object.keys(cart).length > 0;
+        }
+
+        if(hasNewItems){
+            localStorage.setItem(storageKey + '_stats', JSON.stringify(itemCounts));
+        }
+
+        // 發送
+        if (mode === 'direct') {
+            window.open(`https://api.whatsapp.com/send?phone=852${currentSalesPhone}&text=${encodeURIComponent(msg)}`,'_blank');
+        } else {
+            window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`,'_blank');
+        }
+        
+        // 清空邏輯 (延遲執行)
+        setTimeout(() => {
+            if (isMultiDept) {
+                // 清空所有部門購物車
+                for(let key in deptCarts) { deptCarts[key] = {cart:{}, units:{}}; }
+                cart = {}; cartUnits = {};
+                saveCart();
+                // 切回預設部門
+                switchDepartment(multiDeptRules[customerCode].depts[0].id);
+            } else {
+                cart = {}; cartUnits = {};
+                saveCart();
+            }
+            renderAll(); renderFrequent(); calcTotal();
+            if(document.getElementById('cartModal').classList.contains('show')) cartModal.hide();
+        }, 1000);
+    }
+
+    function manualQtyChange(c, val) {
+        let baseC = c.replace('_BOX', '');
+        if (isProductOOS(c)) {
+            syncUI(c); // 確保缺貨時輸入框自動歸零
+            return;
+        }
+
+        // ==========================================
+        // 🔥 攔截器：手動輸入時也執行智慧防呆轉換！
+        // ==========================================
+        let originalC = c;
+        if (typeof autoConvertRules !== 'undefined' && autoConvertRules[customerCode] && autoConvertRules[customerCode][c]) {
+            let targetCode = autoConvertRules[customerCode][c];
+            let targetName = typeof productMap !== 'undefined' && productMap[targetCode] ? productMap[targetCode].name : targetCode;
+            
+            let checkNum = parseFloat(val.replace(/[^\d.]/g, ''));
+            // 只要有輸入大於 0 的數字，就彈出單一黃色提示
+            if (!isNaN(checkNum) && checkNum > 0) {
+                if (typeof showAutoConvertToast === 'function') {
+                    showAutoConvertToast(targetName);
+                }
+            }
+            
+            c = targetCode; // 強制將代碼替換為正確產品
+            baseC = c.replace('_BOX', ''); // 同步更新 baseC
+        }
+
+        let num = parseFloat(val.replace(/[^\d.]/g, ''));
+        if (isNaN(num) || num < 0) num = 0;
+
+        // 🔥 新增：強制活赤貝 (B01) 永遠為 KG，不再彈窗
+        if (c === 'B01') cartUnits[c] = 'kg';
+        
+        // 🔥 升級：手動輸入限購攔截 (支援 VIP 前綴智慧辨識)
+        let currentLimit = Infinity;
+        if (typeof purchaseLimits !== 'undefined' && purchaseLimits[c] !== undefined) {
+            currentLimit = purchaseLimits[c]; // 1. 先拿預設限購數量
+        }
+        if (typeof vipPurchaseLimits !== 'undefined' && vipPurchaseLimits[c]) {
+            // 2. 檢查客戶編號是否以我們設定的字首 (例如 661) 開頭
+            let isVip = vipPurchaseLimits[c].prefixes && vipPurchaseLimits[c].prefixes.some(prefix => customerCode.startsWith(prefix));
+            if (isVip) {
+                currentLimit = vipPurchaseLimits[c].limit; // 如果符合，用專屬數量覆蓋！
+            }
+        }
+
+        if (currentLimit !== Infinity && num > currentLimit) {
+            document.getElementById('limitModalMsg').innerText = `【${productMap[c] ? productMap[c].name : c}】目前貨量有限，您最多限購 ${currentLimit} 盒！\n(已為您自動調整為最高數量)`;
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('limitModal')).show();
+            num = currentLimit; 
+        }
+
+        let isConditional = false;
+        if (typeof conditionalPopupRules !== 'undefined' && conditionalPopupRules[c]) {
+            if (conditionalPopupRules[c].includes(customerCode)) {
+                isConditional = true;
+            }
+        }
+
+        if (num > 0 && (weightedProducts.includes(c) || isConditional) && !cartUnits[c]) {
+            pendingProductCode = c;
+            pendingManualQty = num; 
+            
+            const leftBtn = document.getElementById('btn-unit-left');
+            const rightBtn = document.getElementById('btn-unit-right');
+            const modalTitle = document.querySelector('#unitSelectionModal .modal-title');
+            const modalDesc = document.querySelector('#unitSelectionModal .modal-body p');
+
+            leftBtn.className = 'btn-unit-select';
+            rightBtn.className = 'btn-unit-select';
+            
+            if(modalTitle) modalTitle.innerText = "請選擇計價單位";
+            if(modalDesc) modalDesc.innerText = "此產品支持稱重計價，請確認單位：";
+
+            // 彈窗判斷邏輯 (B01 已移除，從 B14 開始)
+            if (c === 'B14') {
+                leftBtn.classList.add('piece'); leftBtn.innerHTML = '<i class="bi bi-fish"></i> 條<br>(默認)'; leftBtn.onclick = function() { confirmUnit('piece'); };
+                rightBtn.classList.add('kg'); rightBtn.innerHTML = '<i class="bi bi-box-seam"></i> 箱<br>(3條)'; rightBtn.onclick = function() { confirmUnit('box3'); };
+            } else if (c === 'C22F') {
+                if(modalTitle) modalTitle.innerText = "請選擇下單單位";
+                if(modalDesc) modalDesc.innerText = "請確認單位：";
+                leftBtn.classList.add('piece'); leftBtn.innerHTML = '<i class="bi bi-check-circle"></i> 支<br>(默認)'; leftBtn.onclick = function() { confirmUnit('piece'); };
+                rightBtn.classList.add('kg'); rightBtn.innerHTML = '<i class="bi bi-box-seam"></i> 箱<br>(8支)'; rightBtn.onclick = function() { confirmUnit('box'); };
+            } else if (c === 'D69B') {
+                if(modalTitle) modalTitle.innerText = "請選擇下單單位";
+                if(modalDesc) modalDesc.innerText = "請確認單位：";
+                leftBtn.classList.add('piece'); leftBtn.innerHTML = '<i class="bi bi-check-circle"></i> 包<br>(默認)'; leftBtn.onclick = function() { confirmUnit('piece'); };
+                rightBtn.classList.add('kg'); rightBtn.innerHTML = '<i class="bi bi-box-seam"></i> 箱<br>'; rightBtn.onclick = function() { confirmUnit('box'); };
+            } else if (c === 'M007') {
+                if(modalTitle) modalTitle.innerText = "請選擇下單單位";
+                if(modalDesc) modalDesc.innerText = "請確認單位：";
+                leftBtn.classList.add('piece'); leftBtn.innerHTML = '<i class="bi bi-check-circle"></i> 條<br>(默認)'; leftBtn.onclick = function() { confirmUnit('piece'); };
+                rightBtn.classList.add('kg'); rightBtn.innerHTML = '<i class="bi bi-box-seam"></i> 箱<br>(約50磅)'; rightBtn.onclick = function() { confirmUnit('box'); };
+            } else if (c === 'D31A') {
+                if(modalTitle) modalTitle.innerText = "請選擇下單單位";
+                if(modalDesc) modalDesc.innerText = "請確認單位："; 
+                leftBtn.classList.add('piece'); leftBtn.innerHTML = '<i class="bi bi-check-circle"></i> 條<br>(默認)'; leftBtn.onclick = function() { confirmUnit('piece'); };
+                rightBtn.classList.add('kg'); rightBtn.innerHTML = '<i class="bi bi-box-seam"></i> 箱<br>(40條)'; rightBtn.onclick = function() { confirmUnit('box'); }; 
+            } else if (c === 'C53B') {
+                if(modalTitle) modalTitle.innerText = "請選擇下單單位";
+                if(modalDesc) modalDesc.innerText = "請確認單位："; 
+                leftBtn.classList.add('piece'); leftBtn.innerHTML = '<i class="bi bi-check-circle"></i> 包<br>(默認)'; leftBtn.onclick = function() { confirmUnit('piece'); };
+                rightBtn.classList.add('kg'); rightBtn.innerHTML = '<i class="bi bi-box-seam"></i> 箱<br>(10包)'; rightBtn.onclick = function() { confirmUnit('box'); }; 
+            } else if (c === 'C39A') {
+                if(modalTitle) modalTitle.innerText = "請選擇下單單位";
+                if(modalDesc) modalDesc.innerText = "請確認單位："; 
+                leftBtn.classList.add('piece'); leftBtn.innerHTML = '<i class="bi bi-check-circle"></i> 盒<br>(默認)'; leftBtn.onclick = function() { confirmUnit('piece'); };
+                rightBtn.classList.add('kg'); rightBtn.innerHTML = '<i class="bi bi-box-seam"></i> 箱<br>(60盒)'; rightBtn.onclick = function() { confirmUnit('box'); }; 
+            } else if (c === 'C54') {
+                if(modalTitle) modalTitle.innerText = "請選擇下單單位";
+                if(modalDesc) modalDesc.innerText = "請確認單位："; 
+                leftBtn.classList.add('piece'); leftBtn.innerHTML = '<i class="bi bi-check-circle"></i> 包<br>(默認)'; leftBtn.onclick = function() { confirmUnit('piece'); };
+                rightBtn.classList.add('kg'); rightBtn.innerHTML = '<i class="bi bi-box-seam"></i> 箱<br>(20包)'; rightBtn.onclick = function() { confirmUnit('box'); }; 
+            } else if (c === 'D84') {
+                if(modalTitle) modalTitle.innerText = "請選擇下單單位";
+                if(modalDesc) modalDesc.innerText = "請確認單位："; 
+                leftBtn.classList.add('piece'); leftBtn.innerHTML = '<i class="bi bi-check-circle"></i> 包<br>(默認)'; leftBtn.onclick = function() { confirmUnit('piece'); };
+                rightBtn.classList.add('kg'); rightBtn.innerHTML = '<i class="bi bi-box-seam"></i> 箱<br>(20包)'; rightBtn.onclick = function() { confirmUnit('box'); }; 
+            } else if (c === 'D52') {
+                if(modalTitle) modalTitle.innerText = "請選擇下單單位";
+                if(modalDesc) modalDesc.innerText = "請確認單位："; 
+                leftBtn.classList.add('piece'); leftBtn.innerHTML = '<i class="bi bi-check-circle"></i> 包<br>(默認)'; leftBtn.onclick = function() { confirmUnit('piece'); };
+                rightBtn.classList.add('kg'); rightBtn.innerHTML = '<i class="bi bi-box-seam"></i> 箱<br>(8包)'; rightBtn.onclick = function() { confirmUnit('box'); }; 
+            } else if (c === 'D42AA') {
+                if(modalTitle) modalTitle.innerText = "請選擇下單單位";
+                if(modalDesc) modalDesc.innerText = "請確認單位："; 
+                leftBtn.classList.add('piece'); leftBtn.innerHTML = '<i class="bi bi-check-circle"></i> 包<br>(默認)'; leftBtn.onclick = function() { confirmUnit('piece'); };
+                rightBtn.classList.add('kg'); rightBtn.innerHTML = '<i class="bi bi-box-seam"></i> 箱<br>(25包)'; rightBtn.onclick = function() { confirmUnit('box'); }; 
+            } else if (c === 'D52BA') {
+                if(modalTitle) modalTitle.innerText = "請選擇下單單位";
+                if(modalDesc) modalDesc.innerText = "請確認單位："; 
+                leftBtn.classList.add('piece'); leftBtn.innerHTML = '<i class="bi bi-check-circle"></i> 包<br>(默認)'; leftBtn.onclick = function() { confirmUnit('temp_piece'); };
+                rightBtn.classList.add('kg'); rightBtn.innerHTML = '<i class="bi bi-box-seam"></i> 箱<br>(25包)'; rightBtn.onclick = function() { confirmUnit('temp_box'); }; 
+            } else if (c === 'C51' || c === 'C56') {
+                if(modalTitle) modalTitle.innerText = "請選擇下單單位";
+                if(modalDesc) modalDesc.innerText = "請確認單位："; 
+                leftBtn.classList.add('piece'); leftBtn.innerHTML = '<i class="bi bi-check-circle"></i> 支<br>(默認)'; leftBtn.onclick = function() { confirmUnit('temp_piece'); };
+                rightBtn.classList.add('kg'); rightBtn.innerHTML = '<i class="bi bi-collection"></i> 排<br>(10支)'; rightBtn.onclick = function() { confirmUnit('temp_pack'); }; 
+            } else {
+                leftBtn.classList.add('piece'); leftBtn.innerHTML = '<i class="bi bi-box-seam"></i> 件 / 包<br>(默認)'; leftBtn.onclick = function() { confirmUnit('piece'); };
+                rightBtn.classList.add('kg'); rightBtn.innerHTML = '<i class="bi bi-speedometer2"></i> KG<br>(公斤)'; rightBtn.onclick = function() { confirmUnit('kg'); };
+            }
+            
+            const myModalEl = document.getElementById('unitSelectionModal');
+            const myModal = bootstrap.Modal.getOrCreateInstance(myModalEl);
+            myModal.show();
+
+            // 🔥 在彈窗前，確保錯誤產品的 UI 先同步數字，避免畫面卡住
+            if (originalC !== c) proxySyncUI(originalC, c);
+            return;
+        }
+
+        // 🔥 修復：手動輸入時，如果是原箱，確保賦予「箱」單位
+        if (num > 0) {
+            let isGlobal = typeof globalBoxItems !== 'undefined' && (globalBoxItems.includes(c) || globalBoxItems.includes(baseC));
+            let isNative = typeof isNativeBox === 'function' && isNativeBox(c);
+            if (isGlobal) {
+                cartUnits[c] = 'temp_box';
+            } else if (isNative && cartUnits[c] !== 'temp_piece') {
+                cartUnits[c] = 'temp_box';
+            }
+        }
+
+        if (num === 0) {
+            delete cart[c];
+            delete cartUnits[c];
+        } else {
+            cart[c] = num;
+        }
+        syncUI(c);
+
+        // ==========================================
+        // 🔥 視覺代理同步：讓錯誤產品的格子也顯示剛剛手動輸入的數字
+        // ==========================================
+        if (originalC !== c) proxySyncUI(originalC, c);
+    }
+
+    // 🔥🔥🔥 新增：點擊 5 次 -> 打開業務員快速發送窗口 🔥🔥🔥
+    let adminClickCount = 0;
+    let adminMsgGlobal = ""; // 暫存要發送的訊息
+
+    // 監聽底部「共 X 款」文字
+    document.querySelector('.total-box').addEventListener('click', function() {
+        adminClickCount++;
+        if (adminClickCount === 5) {
+            adminClickCount = 0; // 重置
+            openAdminShareModal(); // 直接打開窗口
+        }
+    });
+
+    // 1. 準備文案並打開 Modal
+    function openAdminShareModal() {
+        const codes = Object.keys(cart);
+        if (codes.length === 0) {
+            alert("購物車是空的，請先選擇要幫客戶加入的產品！");
+            return;
+        }
+
+        // 生成鏈接
+        const baseUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+        const addParam = codes.join(',');
+        const finalUrl = `${baseUrl}?id=${customerCode}&add=${addParam}`;
+
+        // 生成產品列表
+        let productNames = [];
+        codes.forEach(c => {
+            if (productMap[c]) productNames.push(`🔸 ${productMap[c].name}`);
+            else productNames.push(`🔸 ${c}`);
+        });
+
+        // 組合訊息
+        adminMsgGlobal = `👋 您好！已為您新增以下產品到常用清單：\n\n${productNames.join('\n')}\n\n👇 請點擊下方連結確認更新：\n${finalUrl}`;
+
+        // 填充 Modal 內容
+        document.getElementById('adminShareList').innerHTML = productNames.join('<br>'); // 預覽顯示 HTML 換行
+        
+        // 顯示 Modal
+        var myModal = new bootstrap.Modal(document.getElementById('adminShareModal'));
+        myModal.show();
+    }
+
+    // 2. 點擊按鈕直接發送
+    function sendAdminWhatsApp() {
+        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(adminMsgGlobal)}`, '_blank');
+    }
+
+    // 🔥 舊的一鍵複製 (保留功能，但不顯示按鈕，以防萬一)
+    function copyUpdateLink() {
+        // ... (代碼省略，因為已經被新功能取代)
+    }
+
+    
+
+    // 🔥 判斷是否為設定好的「原箱產品」
+    function isNativeBox(c) {
+        let baseC = c.replace('_BOX', '');
+        let isGlobal = typeof globalBoxItems !== 'undefined' && (globalBoxItems.includes(c) || globalBoxItems.includes(baseC));
+        let isClient = currentClientBoxItems.includes(c) || currentClientBoxItems.includes(baseC);
+        return isGlobal || isClient || c.endsWith('_BOX');
+    }
+
+   // 🔥 點擊標籤切換單件 (已換成清新的淺綠色)
+    function toggleNativeBox(c) {
+        // 🔥 安全攔截：如果是強制原箱，彈窗警告並禁止切換
+        let baseC = c.replace('_BOX', '');
+        if (typeof globalBoxItems !== 'undefined' && (globalBoxItems.includes(c) || globalBoxItems.includes(baseC))) {
+            alert("此產品僅支援原箱出貨，無法切換為單件！");
+            return;
+        }
+        if (cartUnits[c] === 'temp_piece') {
+            delete cartUnits[c]; 
+        } else {
+            cartUnits[c] = 'temp_piece'; 
+        }
+        syncUI(c);
+        let isPiece = (cartUnits[c] === 'temp_piece');
+        document.querySelectorAll(`#badge-${c}`).forEach(b => {
+            // 🔥 單件改為亮眼的淺綠色背景、深綠色字體
+            b.style.backgroundColor = isPiece ? '#d1e7dd' : '#ffc107';
+            b.style.color = isPiece ? '#0f5132' : '#000';
+            b.innerText = isPiece ? '🏷️ 單件 🔄' : '📦 原箱 🔄';
+        });
+    }
+
+    // 🔥 長按 0.5 秒 (500毫秒) 切換為臨時箱 (大幅縮短時間，避開系統選字菜單)
+    let boxPressTimer;
+    function startBoxPress(c) {
+        let originalC = c;
+        
+        // ==========================================
+        // 🔥 攔截器：長按 0 時也執行防呆轉換！
+        // ==========================================
+        if (typeof autoConvertRules !== 'undefined' && autoConvertRules[customerCode] && autoConvertRules[customerCode][c]) {
+            let targetCode = autoConvertRules[customerCode][c];
+            let targetName = typeof productMap !== 'undefined' && productMap[targetCode] ? productMap[targetCode].name : targetCode;
+            
+            if (typeof showAutoConvertToast === 'function') showAutoConvertToast(targetName);
+            c = targetCode; // 強制將代碼替換為正確產品
+        }
+
+        boxPressTimer = setTimeout(() => {
+            if (typeof toggleTempBox === 'function') toggleTempBox(c);
+            
+            // 🔥 視覺代理同步：讓錯誤產品的格子也能瞬間顯示出「箱」的標記
+            if (originalC !== c && typeof proxySyncUI === 'function') proxySyncUI(originalC, c);
+        }, 500); 
+    }
+    function cancelBoxPress() { clearTimeout(boxPressTimer); }
+    
+    function toggleTempBox(c) {
+        if (cartUnits[c] === 'temp_box') {
+            delete cartUnits[c]; 
+        } else {
+            cartUnits[c] = 'temp_box'; 
+            if (!cart[c]) cart[c] = 1; 
+        }
+        syncUI(c);
+        let el = document.getElementById('qty-' + c);
+        if (el) el.blur(); // 強制解除輸入框鎖定
+        
+        // 震動反饋 (Android 手機有效)
+        if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+
+        // 🔥 新增：視覺閃光回饋 (iPhone 專用補償)
+        // 讓該產品整行背景閃爍一下，手指擋住數字也能用餘光看到
+        let row = document.getElementById('row-' + c);
+        if (row) {
+            row.classList.remove('flash-success');
+            void row.offsetWidth; // 觸發網頁重繪 (Reflow)，讓動畫可以重複觸發
+            row.classList.add('flash-success');
+        }
+    }
+
+    // 🔥 搜索框攔截貼上 (完整版 - 包含智慧防呆轉換、K 單位邏輯)
+    function handleSearchPaste(e) {
+        let paste = (e.clipboardData || window.clipboardData).getData('text');
+        if (!paste) return;
+
+        const eelProducts = ["D22J", "D22L", "D22", "D22C", "D22A", "D22D", "D22I", "D22G"];
+
+        let lines = paste.trim().split('\n');
+        let batchItems = [];
+        let isBatch = false;
+        
+        // 🔥 新增：用來收集這批貼上發生了哪些轉換的報告清單
+        let convertedMsgs = []; 
+
+        for (let line of lines) {
+            let parts = line.trim().split(/\s+/); 
+            if (parts.length >= 2) {
+                // 🔥 終極清理：去掉所有可能隱藏的奇怪符號，只保留字母、數字和底線
+                let rawCode = parts[0].toUpperCase().replace(/[^A-Z0-9_]/g, '');
+                let isBoxSuffix = rawCode.endsWith('_BOX');
+                let code = isBoxSuffix ? rawCode.replace('_BOX', '') : rawCode;
+
+                // ==========================================
+                // 🔥 第一道防線攔截：在解析文字的瞬間，直接替換錯誤代碼！
+                // ==========================================
+                if (typeof autoConvertRules !== 'undefined' && autoConvertRules[customerCode] && autoConvertRules[customerCode][code]) {
+                    let targetCode = autoConvertRules[customerCode][code];
+                    let targetName = typeof productMap !== 'undefined' && productMap[targetCode] ? productMap[targetCode].name : targetCode;
+                    
+                    // 1. 觸發漂亮的黃色 Toast (視覺提示)
+                    if (typeof showAutoConvertToast === 'function') {
+                        showAutoConvertToast(targetName);
+                    }
+                    
+                    // 2. 寫入總結報告 (文字提示)
+                    convertedMsgs.push(`✨ ${code} 已自動切換為客戶常用規格：${targetName}`);
+                    
+                    // 3. 偷天換日：強制將系統記憶的代碼換成正確的
+                    code = targetCode; 
+                }
+
+                // 如果原本 DeepSeek 帶有 _BOX 尾巴，轉換後幫它加回去，以免影響原箱邏輯
+                if (isBoxSuffix) code = code + '_BOX';
+
+                let qtyStr = parts[1].toUpperCase(); 
+                let qty = parseFloat(qtyStr); 
+                
+                let isBox = qtyStr.includes('箱'); 
+                let isPack = qtyStr.includes('排'); 
+                let cleanBase = code.replace('_BOX', '');
+                let isK = qtyStr.includes('K') && eelProducts.includes(cleanBase); 
+                
+                if (!isNaN(qty) && qty > 0) {
+                    isBatch = true;
+                    batchItems.push({ code: code, qty: qty, isBox: isBox, isPack: isPack, isK: isK });
+                }
+            }
+        }
+
+        if (isBatch) {
+            e.preventDefault(); 
+            let successCount = 0;
+            let errors = [];
+
+            batchItems.forEach(item => {
+                let c = item.code;
+                let q = item.qty;
+                let baseC = c.replace('_BOX', ''); 
+                
+                let pName = productMap[c] ? productMap[c].name : (productMap[baseC] ? productMap[baseC].name : '未知名稱');
+
+                if (!productMap[c] && !productMap[baseC]) {
+                    errors.push(`❌ 找不到代碼: ${c}`);
+                    return; 
+                }
+                if (typeof isProductOOS === 'function' && isProductOOS(c)) {
+                    errors.push(`🚫 已缺貨無法加入: ${c} (${pName})`);
+                    return; 
+                }
+
+                // 防止 DeepSeek 匯入超過限購數量
+                if (typeof purchaseLimits !== 'undefined' && purchaseLimits[c] !== undefined) {
+                    let currentQty = cart[c] || 0;
+                    if (currentQty + q > purchaseLimits[c]) {
+                        let allowedAdd = purchaseLimits[c] - currentQty;
+                        if (allowedAdd <= 0) {
+                            errors.push(`⚠️ 限購提示: ${c} (${pName}) 已達上限 ${purchaseLimits[c]}，無法再加`);
+                            return; 
+                        } else {
+                            q = allowedAdd;
+                            errors.push(`⚠️ 限購調整: ${c} (${pName}) 最多限購 ${purchaseLimits[c]}，已自動扣減數量`);
+                        }
+                    }
+                }
+
+                if (!cart[c]) cart[c] = 0;
+                cart[c] += q; 
+
+                // 處理單位標記
+                if (item.isBox) {
+                    cartUnits[c] = 'temp_box'; 
+                } else if (item.isPack) {
+                    cartUnits[c] = 'temp_pack'; 
+                } else if (item.isK) {
+                    cartUnits[c] = 'kg'; 
+                } else if (typeof isNativeBox === 'function' && isNativeBox(c)) {
+                    let baseC = c.replace('_BOX', '');
+                    if (typeof globalBoxItems !== 'undefined' && (globalBoxItems.includes(c) || globalBoxItems.includes(baseC))) {
+                        // 強制原箱
+                    } else {
+                        cartUnits[c] = 'temp_piece'; 
+                    }
+                } else if (c === 'B01' && !cartUnits[c]) {
+                    cartUnits[c] = 'kg'; 
+                }
+                successCount++;
+            });
+
+            if (successCount > 0) {
+                if (typeof saveCart === 'function') saveCart();
+                if (typeof calcTotal === 'function') calcTotal();
+                if (typeof renderAll === 'function') renderAll('');    
+                if (typeof renderFrequent === 'function') renderFrequent(); 
+                
+                const input = document.getElementById('searchInput');
+                input.value = '';
+                let clearBtn = document.getElementById('clearSearchBtn');
+                if (clearBtn) clearBtn.style.display = 'none';
+                input.blur(); 
+            }
+
+            // 🔥 彈窗報告升級：把成功訊息、轉換訊息、錯誤訊息合併在一起顯示
+            let msg = `✅ 批量匯入完成！成功加入 ${successCount} 款產品。\n`;
+            if (convertedMsgs.length > 0) {
+                msg += `\n` + convertedMsgs.join('\n') + `\n`;
+            }
+            if (errors.length > 0) {
+                msg += `\n⚠️ 異常項目，請手動確認：\n` + errors.join('\n');
+            }
+            alert(msg);
+
+            // 自動打開購物車
+            if (successCount > 0) {
+                setTimeout(() => {
+                    if (typeof openCartModal === 'function') openCartModal();
+                }, 100); 
+            }
+        }
+    }
+
+    init(); // 👈 請把這行加在這裡！
+</script>
+</body>
+</html>
