@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <title>五円客戶分發系統</title>
+    <meta name="apple-mobile-web-app-title" content="五円客戶分發系統">
+    <meta property="og:title" content="五円專屬客戶鏈結分發">
+    
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#212529">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+
+    <style>
+        body { 
+            background-color: #f8f9fa; 
+            font-family: "Microsoft JhengHei", sans-serif; 
+            padding-bottom: 50px;
+            padding-bottom: env(safe-area-inset-bottom);
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .top-header {
+            background-color: #212529;
+            color: #ffc107;
+            padding: 15px;
+            padding-top: max(15px, env(safe-area-inset-top)); 
+            text-align: center;
+            font-weight: 800;
+            font-size: 1.3rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .sticky-controls {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background-color: #f8f9fa;
+            padding-top: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .search-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 0 15px;
+            position: relative;
+        }
+        
+        .search-input {
+            border-radius: 20px;
+            padding-left: 40px;
+            border: 1px solid #ced4da;
+            font-size: 16px; 
+            height: 45px;
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 25px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #adb5bd;
+        }
+
+        .client-list-container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 0 15px;
+        }
+
+        .client-row {
+            background: white;
+            border-bottom: 1px solid #eee;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s;
+            gap: 10px;
+        }
+        
+        .client-row:first-child { border-top-left-radius: 10px; border-top-right-radius: 10px; }
+        .client-row:last-child { border-bottom-left-radius: 10px; border-bottom-right-radius: 10px; border-bottom: none; }
+
+        .client-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .c-name { font-size: 1.1rem; font-weight: bold; color: #333; margin-bottom: 2px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .c-code { font-size: 0.85rem; color: #888; font-family: Arial; }
+        
+        .action-group {
+            display: flex;
+            gap: 8px;
+            width: 180px; 
+        }
+        
+        .btn-action {
+            border: none;
+            border-radius: 8px;
+            padding: 8px 0;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            text-decoration: none;
+            font-weight: bold;
+            color: white;
+            transition: transform 0.1s;
+            flex: 1; 
+        }
+        
+        .btn-action:active { transform: scale(0.95); }
+
+        .btn-enter { background-color: #0d6efd; box-shadow: 0 2px 5px rgba(13, 110, 253, 0.3); }
+        .btn-whatsapp { background-color: #25D366; box-shadow: 0 2px 5px rgba(37, 211, 102, 0.3); }
+        .btn-blank { background-color: #ffc107; color: #000; box-shadow: 0 2px 5px rgba(255, 193, 7, 0.3); max-width: 600px; margin: 15px auto 0 auto; }
+
+        .no-result { text-align: center; color: #999; margin-top: 30px; display: none; }
+        
+    </style>
+</head>
+<body onload="initAdmin()">
+
+    <div class="top-header">🎯 五円客戶分發系統</div>
+
+    <div class="sticky-controls">
+        <div class="search-container">
+            <i class="bi bi-search search-icon"></i>
+            <input type="text" id="searchInput" class="form-control search-input" placeholder="🔍 搜尋五円旗下客戶..." oninput="filterClients()">
+        </div>
+        
+        <div class="search-container">
+            <button class="btn-action btn-blank w-100" onclick="generateBlankLink()">
+                <i class="bi bi-file-earmark-plus"></i> 產生「五円專屬空白落單連結」
+            </button>
+        </div>
+    </div>
+
+    <div class="client-list-container">
+        <div id="countDisplay" class="text-center text-muted mb-2" style="font-size: 0.85rem;"></div>
+        <div class="list-group shadow-sm" id="clientList"></div>
+        <div id="noResult" class="no-result">找不到相關客戶 😅</div>
+    </div>
+
+    <script src="https://hkwangtat-order.github.io/new-clients/sales_config.js"></script>
+    <script src="https://hkwangtat-order.github.io/new-clients/customers.js"></script>
+
+    <script>
+        // 🔥 強制鎖死：這個網頁永遠只抓取 sales: "G" (五円) 的客戶
+        const lockedSalesId = "G";
+
+        function initAdmin() {
+            renderClients(lockedSalesId);
+        }
+
+        function renderClients(salesId) {
+            const list = document.getElementById('clientList');
+            const countDiv = document.getElementById('countDisplay');
+            list.innerHTML = "";
+
+            if (typeof clientDB === 'undefined') {
+                list.innerHTML = "<div class='p-3 text-center'>無法連線至總資料庫，請檢查網路</div>";
+                return;
+            }
+
+            let clients = [];
+            for (let code in clientDB) {
+                let c = clientDB[code];
+                // 只有銷售代號為 G 的客戶才會被放進來
+                if (c.sales === salesId) {
+                    clients.push({ code: code, ...c });
+                }
+            }
+            clients.sort((a, b) => a.code.localeCompare(b.code));
+            countDiv.innerText = `共有 ${clients.length} 位專屬客戶`;
+
+            let html = "";
+            const currentPageName = window.location.pathname.split("/").pop();
+            const baseUrl = window.location.href.replace(currentPageName, '').split('?')[0];
+
+            clients.forEach(c => {
+                // 自動生成新帳號的專屬網址
+                const fullLink = baseUrl + `index.html?id=${c.code}`;
+                const searchKey = `${c.name.toUpperCase()} ${c.code.toUpperCase()}`;
+                const safeName = c.name.replace(/'/g, "\\'"); 
+
+                html += `
+                <div class="client-row" data-search="${searchKey}">
+                    <div class="client-info">
+                        <span class="c-name">${c.name}</span>
+                        <span class="c-code">${c.code}</span>
+                    </div>
+                    <div class="action-group">
+                        <button class="btn-action btn-enter" onclick="openInApp('${fullLink}')">
+                            查看 <i class="bi bi-eye-fill"></i>
+                        </button>
+                        <button class="btn-action btn-whatsapp" onclick="shareToWhatsApp('${fullLink}', '${safeName}')">
+                            <i class="bi bi-whatsapp"></i> 轉發
+                        </button>
+                    </div>
+                </div>
+                `;
+            });
+
+            list.innerHTML = html || "<div class='p-5 text-center text-muted'>尚未建立客戶資料</div>";
+        }
+        
+        function generateBlankLink() {
+            const currentPageName = window.location.pathname.split("/").pop();
+            const baseUrl = window.location.href.replace(currentPageName, '').split('?')[0];
+            const fullLink = baseUrl + `index.html?sales=G`;
+            shareToWhatsApp(fullLink, '新客戶');
+        }
+
+        function openInApp(url) {
+            window.location.href = url;
+        }
+
+        function shareToWhatsApp(link, name) {
+            // 🔥 專屬中性文案，絕對不會出現宏達的字眼
+            const text = `你好！為提供更準確快捷的服務，即日起我們推行網上自助落單系統。\n\n這是您的專屬落單網頁：\n${link}\n\n請保存此連結，以後煩請使用網站落單。謝謝您的支持！`;
+            window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+        }
+
+        function filterClients() {
+            const input = document.getElementById('searchInput').value.toUpperCase();
+            const rows = document.querySelectorAll('.client-row');
+            let hasResult = false;
+
+            rows.forEach(row => {
+                const text = row.getAttribute('data-search');
+                if (text.includes(input)) {
+                    row.style.display = "flex";
+                    hasResult = true;
+                } else {
+                    row.style.display = "none";
+                }
+            });
+            document.getElementById('noResult').style.display = hasResult ? 'none' : 'block';
+        }
+    </script>
+</body>
+</html>
