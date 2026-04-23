@@ -840,7 +840,7 @@ const clientDB = {
     // 注意：八焱(尖) 的 ['D39BA'] 既拿過原箱也散買過，需核對單位
     "W4053": { name: "八焱(尖)", sales: "E", list: ["C01", "D58A", "D59H", "D19ER", "B01", "C01CA", "D46B", "D10KC", "D69", "D79", "A12A", "C14G", "C18A", "C24A", "D39BA", "D10KA", "D69B"] },
     "W3888": { name: "Elysium Cafe (旺角)", sales: "F", list: ["D65BA", "D76B", "D30D", "D97", "E03K", "E08AA", "A06E", "D61F", "C26AB", "C59", "C24A", "D80AA", "D43", "D19EK", "D58", "C18E", "D22E", "D57A", "D60F", "D82E"] },
-    "W4092": { name: "Mistia Luna(深)", sales: "F", list: ["C47C", "D80C", "C29C", "C29", "M006B", "E02", "D41C", "D76B", "C24A", "C14G", "C19B", "D82"], box_items: ["C24A", "C14G", "C19B", "D82"] }
+    "W4092": { name: "Mistia Luna(深)", sales: "F", list: ["C47C", "D80C", "C29C", "C29", "M006B", "E02", "D41C", "D76B", "C24A", "C14G", "C19B", "D82"], box_items: ["C24A", "C14G", "C19B", "D82"] },
    
         
     // 昌少客戶
