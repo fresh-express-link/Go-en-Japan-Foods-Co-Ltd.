@@ -845,6 +845,9 @@ const clientDB = {
     // 昌少客戶
     "W4146A": { name: "一緒一番酒場 (中環)", sales: "G", list: ["D09C", "D79AC", "D68", "C57", "C14E", "D69", "C24F", "D84", "C912SC", "D82", "C18C", "D10JA", "C61A", "D57D"] },
     "W4146B": { name: "Anytime (天后)", sales: "G", list: ["D10JA", "D10", "C31B", "D60F"] },
+    "W4146D": { name: "The Pearl (尖沙咀)", sales: "G", list: ["C01D", "D10JA", "D19EA", "C36D", "C19B", "C26G"] },
+    "W4146E": { name: "十四代鐵板超(尖沙咀)", sales: "G", list: ["A03"] },
+    "W4146F": { name: "852居酒屋(尖沙咀)", sales: "G", list: ["A03"] },
     "W4146C": { name: "CENSU (中環)", sales: "G", list: ["A03"] }
 };
 
