@@ -841,18 +841,17 @@ const clientDB = {
     "W4053": { name: "八焱(尖)", sales: "E", list: ["C01", "D58A", "D59H", "D19ER", "B01", "C01CA", "D46B", "D10KC", "D69", "D79", "A12A", "C14G", "C18A", "C24A", "D39BA", "D10KA", "D69B"] },
     "W3888": { name: "Elysium Cafe (旺角)", sales: "F", list: ["D65BA", "D76B", "D30D", "D97", "E03K", "E08AA", "A06E", "D61F", "C26AB", "C59", "C24A", "D80AA", "D43", "D19EK", "D58", "C18E", "D22E", "D57A", "D60F", "D82E"] },
     "W4092": { name: "Mistia Luna(深)", sales: "F", list: ["C47C", "D80C", "C29C", "C29", "M006B", "E02", "D41C", "D76B", "C24A", "C14G", "C19B", "D82"], box_items: ["C24A", "C14G", "C19B", "D82"] }, // 👈👈👈 就是這裡！大括號後面一定要加逗號！
-    
-    // 昌少客戶
-    "W4146G": { name: "汝•鉄板燒(深水埗)", sales: "G", list: ["A03"] },
-    "W4146H": { name: "后•鐵板燒(北角)", sales: "G", list: ["A03"] },
-    "W4146J": { name: "安•鐵板燒(大埔)", sales: "G", list: ["A03"] },
-    "W4146K": { name: "春•鉄板燒(尖沙咀)", sales: "G", list: ["A03"] },
+   // 昌少客戶
     "W4146A": { name: "一緒一番酒場 (中環)", sales: "G", list: ["D09C", "D79AC", "D68", "C57", "C14E", "D69", "C24F", "D84", "C912SC", "D82", "C18C", "D10JA", "C61A", "D57D"] },
     "W4146B": { name: "Anytime (天后)", sales: "G", list: ["D10JA", "D10", "C31B", "D60F"] },
+    "W4146C": { name: "CENSU (中環)", sales: "G", list: ["A03"] },
     "W4146D": { name: "The Pearl (尖沙咀)", sales: "G", list: ["C28D", "D64BA", "C26B", "C01D", "D10JA", "D19EA", "C36D", "C19B", "C26G"] },
     "W4146E": { name: "十四代鐵板超(尖沙咀)", sales: "G", list: ["A03"] },
     "W4146F": { name: "852居酒屋(尖沙咀)", sales: "G", list: ["A03"] },
-    "W4146C": { name: "CENSU (中環)", sales: "G", list: ["A03"] }
+    "W4146G": { name: "汝•鉄板燒(深水埗)", sales: "G", list: ["A03"] },
+    "W4146H": { name: "后•鐵板燒(北角)", sales: "G", list: ["A03"] },
+    "W4146J": { name: "安•鐵板燒(大埔)", sales: "G", list: ["A03"] },
+    "W4146K": { name: "春•鉄板燒(尖沙咀)", sales: "G", list: ["A03"] }
 };
 
 // 👥 連鎖店群組設定 (多店一鏈接)
