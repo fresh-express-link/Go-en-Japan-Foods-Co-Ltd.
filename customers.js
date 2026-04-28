@@ -842,7 +842,7 @@ const clientDB = {
     "W3888": { name: "Elysium Cafe (旺角)", sales: "F", list: ["D65BA", "D76B", "D30D", "D97", "E03K", "E08AA", "A06E", "D61F", "C26AB", "C59", "C24A", "D80AA", "D43", "D19EK", "D58", "C18E", "D22E", "D57A", "D60F", "D82E"] },
     "W4092": { name: "Mistia Luna(深)", sales: "F", list: ["C47C", "D80C", "C29C", "C29", "M006B", "E02", "D41C", "D76B", "C24A", "C14G", "C19B", "D82"], box_items: ["C24A", "C14G", "C19B", "D82"] }, // 👈👈👈 就是這裡！大括號後面一定要加逗號！
    // 昌少客戶
-    "W4146A": { name: "一緒一番酒場 (中環)", sales: "G", list: ["D09C", "D79AC", "D68", "C57", "C14E", "D69", "C24F", "D84", "C912SC", "D82", "C18C", "D10JA", "C61A", "D57D"] },
+    "W4146A": { name: "一緒一番酒場 (中環)", sales: "G", list: ["C53B", "C01F", "C05A", "C01", "C01CA", "C01CH", "C20A", "C22E", "C24A", "C26A", "C26AB", "C34A", "C35B", "C36D", "D09C", "D10JA", "D57", "D84", "M007", "M008C"] },
     "W4146B": { name: "Anytime (天后)", sales: "G", list: ["D10JA", "D10", "C31B", "D60F"] },
     "W4146C": { name: "CENSU (中環)", sales: "G", list: ["A03"] },
     "W4146D": { name: "The Pearl (尖沙咀)", sales: "G", list: ["C28D", "D64BA", "C26B", "C01D", "D10JA", "D19EA", "C36D", "C19B", "C26G"] },
