@@ -275,7 +275,7 @@
 
 <script>
     // 💡 每次發布新功能或修改資料，請修改這個版本號
-    const CURRENT_WEB_VERSION = "20260504.04"; 
+    const CURRENT_WEB_VERSION = "20260515.04"; 
 
     (function() {
         const savedVer = localStorage.getItem('app_version_tag');
@@ -298,8 +298,8 @@
         }
     })();
 </script>
-<script src="sales_config.js?v=20260504.04"></script>
-<script src="customers.js?v=20260504.04"></script>
+<script src="sales_config.js?v=20260515.04"></script>
+<script src="customers.js?v=20260515.04"></script>
 
 <div class="sticky-header-container">
     
@@ -586,7 +586,7 @@ const weightedUnitMap = {
     // 💡 預設價格隱藏，需透過彩蛋解鎖
 const productInfo = {
         "A06F": { price: "$98/盒", boxSpec: "" },
-        "AC200": { price: "$398/盒", boxSpec: "" },
+        "AC180": { price: "$328/盒", boxSpec: "" },
         "A07C": { price: "$98/盒", boxSpec: "" },
         "A00A": { price: "$30/盒", boxSpec: "" },
         "A03": { price: "$125/盒", boxSpec: "" },
@@ -601,7 +601,7 @@ const productInfo = {
         "AJ3": { price: "時價", boxSpec: "" },
         "AJ6": { price: "時價", boxSpec: "" },
         "B01": { price: "$85/kg", boxSpec: "25kg / 箱" },
-        "B50": { price: "$145/kg", boxSpec: "" }, // 價格已更新
+        "B50": { price: "$158/kg", boxSpec: "" },
         "B14": { price: "時價/kg", boxSpec: "" },
         "B14C": { price: "時價/kg", boxSpec: "" },
         "B14H": { price: "時價/邊", boxSpec: "" },
@@ -643,7 +643,7 @@ const productInfo = {
         "C01D": { price: "$28/樽", boxSpec: "" },
         "C05": { price: "$36/kg", boxSpec: "" },
         "C05A": { price: "$58/kg", boxSpec: "" },
-        "D03A": { price: "$335/盒", boxSpec: "12盒 / 箱" },
+        "D03A": { price: "$330/盒", boxSpec: "12盒 / 箱" },
         "D03B": { price: "$378/盒", boxSpec: "12盒 / 箱" },
         "D04C": { price: "$378/盒", boxSpec: "12盒 / 箱" },
         "D04D": { price: "$378/盒", boxSpec: "12盒 / 箱" },
@@ -682,8 +682,8 @@ const productInfo = {
         "D47": { price: "$192/盒", boxSpec: "10盒 / 箱" },
         "D47B": { price: "$42/碟", boxSpec: "20碟 / 箱" },
         "D47C": { price: "$56/碟", boxSpec: "20碟 / 箱" },
-        "D07": { price: "$23/碟", boxSpec: "50包 / 箱" },
-        "D07A": { price: "$47/碟", boxSpec: "50碟 / 箱" },
+        "D07": { price: "$25/碟", boxSpec: "50包 / 箱" },
+        "D07A": { price: "$50/碟", boxSpec: "50碟 / 箱" },
         "D48A": { price: "$42/包", boxSpec: "40碟 / 箱" },
         "D48B": { price: "$42/包", boxSpec: "40碟 / 箱" },
         "D48E": { price: "$21/碟", boxSpec: "50碟 / 箱" },
@@ -746,16 +746,16 @@ const productInfo = {
         "D21FC": { price: "$24/盒", boxSpec: "" },
         "D21FA": { price: "$42/盒", boxSpec: "" },
         "D21FB": { price: "$138/盒", boxSpec: "" },
-        "D22J": { price: "$128/kg", boxSpec: "10kg / 箱" },
+        "D22J": { price: "$120/kg", boxSpec: "10kg / 箱" },
         "D22L": { price: "$118/kg", boxSpec: "10kg / 箱" },
-        "D22": { price: "$129/kg", boxSpec: "10kg / 箱" },
+        "D22": { price: "$122/kg", boxSpec: "10kg / 箱" },
         "D22C": { price: "$122/kg", boxSpec: "10kg / 箱" },
-        "D22A": { price: "$135/kg", boxSpec: "10kg / 箱" },
+        "D22A": { price: "$128/kg", boxSpec: "10kg / 箱" },
         "D22D": { price: "$123/kg", boxSpec: "10kg / 箱" },
         "D22I": { price: "$110/kg", boxSpec: "10kg / 箱" },
         "D22G": { price: "$104/kg", boxSpec: "10kg / 箱" },
         "D22H": { price: "$45/包", boxSpec: "20包 / 箱" },
-        "D22E": { price: "$29/條", boxSpec: "" },
+        "D22E": { price: "$28/條", boxSpec: "" },
         "D15B": { price: "$208/包", boxSpec: "15包 / 箱" },
         "D22FA": { price: "$24/碟", boxSpec: "50包 / 箱" },
         "D42A": { price: "$69/包", boxSpec: "10包 / 箱" },
@@ -774,7 +774,7 @@ const productInfo = {
         "D16": { price: "$9/條", boxSpec: "25條 / 箱" },
         "D16AA": { price: "$6/包", boxSpec: "50包 / 箱" },
         "D06A": { price: "$27/包", boxSpec: "20包 / 箱" },
-        "D68": { price: "$39/包", boxSpec: "10包 / 箱" },
+        "D68": { price: "$37/包", boxSpec: "10包 / 箱" },
         "D06": { price: "$26/包", boxSpec: "20包 / 箱" },
         "D68B": { price: "$10/包", boxSpec: "20包 / 箱" },
         "D06C": { price: "$42/包", boxSpec: "10包 / 箱" },
@@ -861,7 +861,8 @@ const productInfo = {
         "C58A": { price: "$32/罐", boxSpec: "24罐 / 箱" },
         "D12A": { price: "$110/盒", boxSpec: "10盒 / 箱" },
         "DC58AC": { price: "$52/包", boxSpec: "20包 / 箱" },
-        "D60G": { price: "$95/盒", boxSpec: "16包 / 箱" },
+        "D60G": { price: "$93/盒", boxSpec: "16包 / 箱" },
+        "D60H": { price: "$105/盒", boxSpec: "16包 / 箱" },
         "E03": { price: "$52/包", boxSpec: "10包 / 箱" },
         "E03K": { price: "$65/包", boxSpec: "20包 / 箱" },
         "E03A": { price: "$50/包", boxSpec: "10包 / 箱" },
@@ -1216,26 +1217,34 @@ const productInfo = {
     let noteModal = null;
     let pendingManualQty = null;
 
-    // 缺貨清單
-    outOfStockCodes = ["C20BB" , "C34A" , "C51BB", "C92", "C01E", "C18J", "D03B", "D03E", "D09AB", "D10KA", "D25", "D62", "D39C", "D09M", "D60H",  "D88FG", "AC200",  "A07C", "A12A", "A12B", "AJ1", "AJ4", "AJ3", "AJ6"];
+    outOfStockCodes = ["C01FA" ,"C01CB" , "C20BB" , "C34A" , "C51BB", "C92", "C01E", "C18J", "D03B", "D03E", "D09AB", "D10KA", "D25", "D62", "D39C", "D09M", "D60H", "D79AC","D88FG", "A07C", "A12A", "A12B", "AJ1", "AJ4", "AJ3", "AJ6"];
 
     // 🔥 新增：業務員專屬缺貨清單 (填入代碼即可)
     const salesSpecificOOS = {
         "A": [], // 只有 Sales A (志哥) 的客戶會看到這裡面的產品缺貨
         "B": [],      // Sales B 的專屬缺貨
-        "C": [],      // Sales P 的專屬缺貨
-        "D": []       // Sales C 的專屬缺貨
+        "C": [],      // Sales C 的專屬缺貨
+        "D": []       // Sales D 的專屬缺貨
     };
 
     // 🔥 新增：智慧判斷產品是否缺貨的核心函數 (已將開關內建，防止變數衝突崩潰)
     function isProductOOS(c) {
+        // 🌟 0. 新增：專屬「特權白名單」 (無視缺貨，強制有貨，最高優先級)
+        let exclusiveWhitelist = {
+            "A06F": ["661"] // 661 享有特權，強制顯示 A06F
+        };
+        if (exclusiveWhitelist[c]) {
+            let isPrivileged = exclusiveWhitelist[c].some(prefix => customerCode.startsWith(prefix));
+            if (isPrivileged) return false; // 命中白名單，直接給綠燈，回報「不缺貨」！
+        }
+
         // ==========================================
         // 🔥 日本鮮貨專區設定 (內建於函數中，絕對安全)
         // ==========================================
         let isJapanFreshOpen = true; // 總開關：false = 預設全面缺貨，true = 開放購買
         let japanFreshList = ["B67A", "B67B", "B67C", "B04", "B55A", "B74C", "B20E", "B20G", "B74G", "B55D", "B09", "B13", "B08SB", "B55E", "B74F", "B02E", "B08TA"];
 
-        // 1. 🔥 日本鮮貨「一鍵開關」攔截 (最高優先級)
+        // 1. 🔥 日本鮮貨「一鍵開關」攔截 
         if (isJapanFreshOpen === false && japanFreshList.includes(c)) {
             return true; // 開關關閉且為日本鮮貨，強制回報為缺貨！
         }
@@ -1248,14 +1257,19 @@ const productInfo = {
         // 3. 特定客戶專屬的「黑名單缺貨」設定 (客戶專屬 OOS)
         // 格式： "產品代碼": ["客戶編號開頭1", "客戶編號開頭2"]
         let conditionalOOS = {
-            "A03": ["A2348"], //龍亭全線不給加拿大海膽 🔥 記得這行最後要加逗號！
+            // 🔥 龍亭全線(A2348) 與 661開頭的客戶 不給加拿大海膽
+            "A03": ["A2348"], 
             
+            // 🔥 661開頭的客戶 不給特級馬糞180g (精選花箱)
+            "AC180": ["6377"],
+
             // 🔥 茹壽司(大埔) 全部三文魚 lock
             "B14": ["W3982#P"],
             "B14C": ["W3982#P"],
             "B14AA": ["W3982#P"],
             "B14H": ["W3982#P"]
         };
+        
         if (conditionalOOS[c]) {
             // 檢查當前登入的客戶編號，是否以我們設定的字首開頭
             let isTargetClient = conditionalOOS[c].some(prefix => customerCode.startsWith(prefix));
@@ -1267,37 +1281,50 @@ const productInfo = {
         return false;
     }
 
+
     // ==========================================
-    // 🚀 海膽強制置頂與缺貨隱藏大腦 (完美同步黑名單版)
+        // 🚀 海膽強制置頂與缺貨隱藏大腦 (完美同步黑名單與特權白名單版)
     // ==========================================
     (function applyTopItems() {
-        const topItems = ["A03", "A08", "A07C", "A06F", "AC200"];
+        // 🔥 這裡的 topItems 已經包含了 AC180
+        const topItems = ["A03", "A08", "A07C", "A06F", "AC180"];
         
         for (const customerId in clientDB) {
             if (clientDB.hasOwnProperty(customerId)) {
-                let originalList = clientDB[customerId].list;
+                let originalList = clientDB[customerId].list || [];
                 
                 // 🔥 核心修復：在為「這個客戶」排隊時，執行專屬的缺貨檢查
                 let availableTopItems = topItems.filter(item => {
-                    // 1. 檢查全域缺貨
-                    if (typeof outOfStockCodes !== 'undefined' && outOfStockCodes.includes(item)) return false;
+                    // 🌟 0. 檢查專屬白名單特權
+                    let exclusiveWhitelist = {
+                        "A06F": ["661"] 
+                    };
+                    let isPrivileged = exclusiveWhitelist[item] && exclusiveWhitelist[item].some(prefix => customerId.startsWith(prefix));
+
+                    // 1. 檢查全域缺貨 (如果沒有特權保護，且在缺貨清單內，就隱藏)
+                    if (!isPrivileged && typeof outOfStockCodes !== 'undefined' && outOfStockCodes.includes(item)) return false;
 
                     // 2. 檢查針對「這個特定客戶」的黑名單 (conditionalOOS)
-                    // 這裡我們直接把剛剛寫在 isProductOOS 裡的黑名單邏輯搬過來
+                    // 🚨 這裡已經與 isProductOOS 同步，加入了 661 規則
                     let conditionalOOS = {
-                        "A03": ["A2348"] 
+                        "A03": ["A2348"], 
+                        "AC180": ["6377"],
+                        "B14": ["W3982#P"],
+                        "B14C": ["W3982#P"],
+                        "B14AA": ["W3982#P"],
+                        "B14H": ["W3982#P"]
                     };
 
                     if (conditionalOOS[item]) {
                         // 檢查當前的 customerId 是否匹配黑名單開頭
                         let isBlacklisted = conditionalOOS[item].some(prefix => customerId.startsWith(prefix));
-                        if (isBlacklisted) return false; // 如果在黑名單裡，就過濾掉
+                        if (isBlacklisted && !isPrivileged) return false; // 如果在黑名單裡且沒特權，就直接過濾掉（完美隱藏！）
                     }
 
                     return true; // 沒中招，代表有貨
                 });
                 
-                // 2. 去重：把這 4 款海膽從客戶原本的清單中剔除
+                // 2. 去重：把這 5 款海膽從客戶原本的清單中剔除
                 let filteredList = originalList.filter(item => !topItems.includes(item));
                 
                 // 3. 完美重組
@@ -1305,13 +1332,14 @@ const productInfo = {
             }
         }
     })();
+
     const eelProducts = ["D22J", "D22L", "D22", "D22C", "D22A", "D22D", "D22I", "D22G"];
     const weightedProducts = ["D61B", "D61C", "D18A", "D17E", "D17C", "D69E", "D17D", "D17DD", "D17G", "D17DE", "B14", "C22F", "D69B", "M007", "D52BA", "C51", "C56"];
     const stepTenCodes = ["C07", "C07A"];
     
     // 產品清單
 const fullCatalog = [
-        { cat: "環球海膽", items: ["加拿大海膽 (A03)", "紫海膽(膠盒) (A07C)", "澳洲海膽 (A08)", "馬糞海膽(膠盒) (A06F)",  "俄羅斯馬糞海膽(中國加工) (AC200)",  "練海膽醬 (DC59)", "凍海膽漿 (D01)", "急凍特價海膽 (A00A)", "墨西哥海膽 (A12A)", "墨西哥海膽10格 (A12B)", "凍熟馬糞膽 (A06E)"] },
+        { cat: "環球海膽", items: ["加拿大海膽 (A03)", "紫海膽(膠盒) (A07C)", "澳洲海膽 (A08)", "馬糞海膽(膠盒) (A06F)",  "特級馬糞180g(精選花箱) (AC180)",  "練海膽醬 (DC59)", "凍海膽漿 (D01)", "急凍特價海膽 (A00A)", "墨西哥海膽 (A12A)", "墨西哥海膽10格 (A12B)", "凍熟馬糞膽 (A06E)"] },
         { cat: "日本海膽", items: ["日本海膽A Grade(直排) (AJ1)", "日本海膽A Grade(亂排) (AJ4)", "日本海膽B Grade(亂排) (AJ3)", "鹽水海膽 (AJ6)"] },
         { cat: "鮮活海產類", items: ["活赤貝 (B01)", "鮮油甘魚（原條） (B50)", "鮮三文魚（原條） (B14)", "鮮三文魚 (箱取3條) (B14C)", "鮮三文魚(加工-箱取6邊) (B14AA)",  "鮮三文魚柳 (B14H)"] },
         { cat: "日本鮮貨<span class='fresh-notice'>逢星期二、五到港，需提前預定</span>", items: ["L鮮大拖羅腹1（赤身附） (B67A)", "S鮮大拖羅腹1（赤身附） (B67AA)", "鮮大拖羅腹2（赤身附） (B67B)", "鮮吞拿魚赤身（去血合） (B67C)", "鮮油甘柳（半邊） (B50C)", "池魚王 (B55)", "細池魚 (B55A)", "間八 (B04)", "金目鯛 (B74C)", "蜜柑鯛 (B20E)", "真鯛 (B20G)", "平目 (B74G)", "魴鮄 (B55D)", "太刀魚 (B55E)", "伊左木 (B74F)", "鯖魚 (B73)", "金目池王雜魚箱 (B74A)", "活北寄貝 (B09)", "活粒貝 (B02E)", "鮮帶子肉(生食用)(限星期五供應) (B13)", "令和之怪物生蠔 (B08SB)", "即食生蠔100g (B08TA)"] },
